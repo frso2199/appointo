@@ -1,0 +1,6 @@
+{
+  "name": "AppointO",
+  "description": "AI-Powered Appointment Scheduling Platform. Automate bookings, reminders, WhatsApp follow-ups, and staff scheduling on a single dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
