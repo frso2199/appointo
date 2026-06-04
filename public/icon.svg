@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1329" />
+      <stop offset="100%" stop-color="#030712" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded Base Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  
+  <!-- Subtle Glowing Ring -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="url(#accentGrad)" stroke-width="6" stroke-opacity="0.25" />
+
+  <!-- AppointO Calendar & Sparkle Symbol -->
+  <g transform="translate(116, 106)">
+    <!-- Calendar Body -->
+    <rect x="20" y="50" width="240" height="220" rx="36" fill="none" stroke="url(#accentGrad)" stroke-width="24" stroke-linejoin="round" />
+    
+    <!-- Calendar Grid Horizontal Bar -->
+    <line x1="20" y1="120" x2="260" y2="120" stroke="url(#accentGrad)" stroke-width="20" stroke-linecap="round" />
+    
+    <!-- Calendar Binder Hooks -->
+    <rect x="68" y="16" width="24" height="56" rx="12" fill="white" />
+    <rect x="188" y="16" width="24" height="56" rx="12" fill="white" />
+    
+    <!-- Pulsating Booking Dot inside Calendar -->
+    <circle cx="140" cy="190" r="32" fill="url(#accentGrad)" />
+    <circle cx="140" cy="190" r="16" fill="white" />
+    
+    <!-- Sparkling Indicator -->
+    <path d="M 220 180 C 220 210, 230 220, 260 220 C 230 220, 220 230, 220 260 C 220 230, 210 220, 180 220 C 210 220, 220 210, 220 180 Z" fill="#22c55e" />
+  </g>
+</svg>

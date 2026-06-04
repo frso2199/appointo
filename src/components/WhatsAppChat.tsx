@@ -77,7 +77,7 @@ export default function WhatsAppChat({ onTriggerDemo }: WhatsAppChatProps) {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 select-none">
+    <div className="fixed bottom-20 right-4 sm:right-6 md:bottom-6 z-[60] select-none">
       
       {/* Floating Green WhatsApp Button */}
       <motion.button
@@ -108,7 +108,7 @@ export default function WhatsAppChat({ onTriggerDemo }: WhatsAppChatProps) {
             initial={{ opacity: 0, scale: 0.85, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 30 }}
-            className="absolute bottom-16 right-0 w-[330px] overflow-hidden rounded-2xl border border-slate-200 bg-emerald-50 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:w-[360px]"
+            className="absolute bottom-16 -right-1.5 w-[calc(100vw-32px)] max-w-[340px] sm:max-w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-emerald-50 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:-right-2 sm:w-[360px]"
             id="whatsapp-sim-chat"
           >
             {/* Header */}

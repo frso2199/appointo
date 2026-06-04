@@ -4,7 +4,7 @@ import {
   Sparkles, Check, Star, CheckCircle2, ChevronRight, Phone, Mail, 
   MapPin, Clock, Globe, Shield, Send, ArrowRight, Activity, 
   Scissors, Car, HeartPulse, Briefcase, Plus, Moon, Sun, Laptop, 
-  Smile, UserCheck, Key, RefreshCcw, Landmark 
+  Smile, UserCheck, Key, RefreshCcw, Landmark, Home, CreditCard, HelpCircle
 } from 'lucide-react';
 
 import { INDUSTRIES, INITIAL_APPOINTMENTS } from './data';
@@ -17,17 +17,52 @@ import TestimonialsCarousel from './components/TestimonialsCarousel';
 import WhatsAppChat from './components/WhatsAppChat';
 import SubPages from './components/SubPages';
 import RazorpayCheckoutModal from './components/RazorpayCheckoutModal';
+import EricChatbot from './components/EricChatbot';
+import AdminLoginModal from './components/AdminLoginModal';
+import CrmDashboard from './components/CrmDashboard';
+
+const parseResponse = async (r: Response) => {
+  const contentType = r.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return r.json();
+  }
+  const text = await r.text();
+  console.warn('[Network] Received non-JSON response from server:', text);
+  return { success: false, error: text || 'Non-JSON server response' };
+};
 
 export default function App() {
   const [appointments, setAppointments] = useState<Appointment[]>(INITIAL_APPOINTMENTS);
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [demoSelectedIndustry, setDemoSelectedIndustry] = useState('clinics');
   const [darkMode, setDarkMode] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'home' | 'blog' | 'help' | 'privacy' | 'terms'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'blog' | 'help' | 'privacy' | 'terms' | 'refunds' | 'shipping' | 'crm'>('home');
   
-  // Razorpay Standard Checkout states
+  // Admin Login and CRM State
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [adminUser, setAdminUser] = useState<{ email: string; name: string } | null>(null);
+  
+  // Razorpay Subscriptions state hooks
   const [isRazorpayOpen, setIsRazorpayOpen] = useState(false);
   const [selectedPlanDetails, setSelectedPlanDetails] = useState<{ name: string; price: number; billingCycle: string } | null>(null);
+  const [razorpayPrefill, setRazorpayPrefill] = useState<{ name: string; business: string; phone: string } | null>(null);
+  const [userSubscription, setUserSubscription] = useState<any>(null);
+
+  const fetchSubscriptionStatus = async () => {
+    try {
+      const res = await fetch('/api/subscription-status');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUserSubscription(data.subscription);
+      }
+    } catch (err) {
+      console.error('[App Server Sync] Error synchronizing client/server subscription indexes:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscriptionStatus();
+  }, []);
 
   // Helper trigger to kick off securely verified standard pricing payment checkout
   const handleOpenPaymentCheckout = (name: string, price: number, billingCycle: string) => {
@@ -50,8 +85,111 @@ export default function App() {
   const [isContactSubmitted, setIsContactSubmitted] = useState(false);
   const [contactSuccessTimer, setContactSuccessTimer] = useState(0);
 
-  // Sync dark mode class with HTML document element
+  // Real-time validation states
+  const [contactErrors, setContactErrors] = useState<{
+    name?: string;
+    business?: string;
+    phone?: string;
+    email?: string;
+    city?: string;
+  }>({});
+
+  const [touchedFields, setTouchedFields] = useState<{
+    name?: boolean;
+    business?: boolean;
+    phone?: boolean;
+    email?: boolean;
+    city?: boolean;
+  }>({});
+
+  // Real-time validation engine
   useEffect(() => {
+    const errors: typeof contactErrors = {};
+
+    // Name Validation
+    if (touchedFields.name) {
+      if (!contactName.trim()) {
+        errors.name = 'Full Name is required.';
+      } else if (contactName.trim().length < 2) {
+        errors.name = 'Name must be at least 2 characters.';
+      } else if (!/^[A-Za-z\s.\-']+$/.test(contactName.trim())) {
+        errors.name = 'Name can only contain letters, spaces, dots, or hyphens.';
+      }
+    }
+
+    // Business Name Validation
+    if (touchedFields.business) {
+      if (!contactBusiness.trim()) {
+        errors.business = 'Business / Clinic Name is required.';
+      } else if (contactBusiness.trim().length < 2) {
+        errors.business = 'Business Name must be at least 2 characters.';
+      }
+    }
+
+    // Phone Validation
+    if (touchedFields.phone) {
+      if (!contactPhone.trim()) {
+        errors.phone = 'WhatsApp number is required.';
+      } else {
+        const cleaned = contactPhone.replace(/[\s\-()]/g, '');
+        // Require 10 to 15 digits including optional plus prefix
+        const phoneRegex = /^\+?[0-9]{10,15}$/;
+        if (!phoneRegex.test(cleaned)) {
+          errors.phone = 'Please enter a valid 10-15 digit WhatsApp number with optional country code (e.g., 919876543210).';
+        }
+      }
+    }
+
+    // Email Validation (optional but validated if filled)
+    if (touchedFields.email && contactEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(contactEmail.trim())) {
+        errors.email = 'Please enter a valid email address.';
+      }
+    }
+
+    // City Validation
+    if (touchedFields.city) {
+      if (!contactCity.trim()) {
+        errors.city = 'City is required.';
+      } else if (contactCity.trim().length < 2) {
+        errors.city = 'City must be at least 2 characters.';
+      }
+    }
+
+    setContactErrors(errors);
+  }, [contactName, contactBusiness, contactPhone, contactEmail, contactCity, touchedFields]);
+
+  // Real-time touched handlers
+  const handleNameChange = (val: string) => {
+    setContactName(val);
+    setTouchedFields(prev => ({ ...prev, name: true }));
+  };
+
+  const handleBusinessChange = (val: string) => {
+    setContactBusiness(val);
+    setTouchedFields(prev => ({ ...prev, business: true }));
+  };
+
+  const handlePhoneChange = (val: string) => {
+    setContactPhone(val);
+    setTouchedFields(prev => ({ ...prev, phone: true }));
+  };
+
+  const handleEmailChange = (val: string) => {
+    setContactEmail(val);
+    setTouchedFields(prev => ({ ...prev, email: true }));
+  };
+
+  const handleCityChange = (val: string) => {
+    setContactCity(val);
+    setTouchedFields(prev => ({ ...prev, city: true }));
+  };
+
+
+  // Sync dark mode class with HTML document element and set the tab title
+  useEffect(() => {
+    document.title = 'AppointO';
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -84,7 +222,7 @@ export default function App() {
   };
 
   // Helper for dynamic multi-page routing and smooth hash scrolling
-  const handleNavClick = (page: 'home' | 'blog' | 'help' | 'privacy' | 'terms', sectionId?: string) => {
+  const handleNavClick = (page: 'home' | 'blog' | 'help' | 'privacy' | 'terms' | 'refunds' | 'shipping' | 'crm', sectionId?: string) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (sectionId) {
@@ -100,7 +238,26 @@ export default function App() {
   // Contact form submission
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactName || !contactPhone || !contactBusiness) return;
+    
+    // Mark all fields as touched to trigger any real-time feedback visible to the user
+    setTouchedFields({
+      name: true,
+      business: true,
+      phone: true,
+      email: true,
+      city: true
+    });
+
+    const isNameValid = contactName.trim().length >= 2 && /^[A-Za-z\s.\-']+$/.test(contactName.trim());
+    const isBusinessValid = contactBusiness.trim().length >= 2;
+    const isPhoneValid = /^\+?[0-9]{10,15}$/.test(contactPhone.replace(/[\s\-()]/g, ''));
+    const isEmailValid = !contactEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim());
+    const isCityValid = contactCity.trim().length >= 2;
+
+    if (!isNameValid || !isBusinessValid || !isPhoneValid || !isEmailValid || !isCityValid) {
+      // Prevent submission if the user has invalid values
+      return;
+    }
 
     setIsContactSubmitted(true);
     // Simulate setup steps countdown
@@ -120,7 +277,7 @@ export default function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        to: 'frederic.soreng@gmail.com',
+        to: 'success@appointo.online',
         subject: `AppointO Demo Request: ${contactBusiness} by ${contactName}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; padding: 24px; border: 1px solid #e1e8ed; border-radius: 12px;">
@@ -161,16 +318,35 @@ export default function App() {
                 </tr>
               </table>
               <div style="margin-top: 30px; border-top: 1px solid #e1e8ed; padding-top: 20px; font-size: 11px; color: #8898aa;">
-                🛡️ Transmitted securely by AppointO Resend Email integration engine powered by Innovatronix IT Solutions LLP.
+                🛡️ Transmitted securely by AppointO Resend Email integration engine powered by Innovationix IT Solutions LLP.
               </div>
             </div>
           </div>
         `
       })
     })
-    .then(r => r.json())
+    .then(parseResponse)
     .then(data => console.log('[Email Integration] Support contact notification result:', data))
     .catch(err => console.error('[Email Integration] Failed to submit support email notification:', err));
+
+    // Sync contact form submission to CRM Leads DB
+    fetch('/api/crm/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        business_name: contactBusiness,
+        owner_name: contactName,
+        mobile: contactPhone,
+        email: contactEmail || '',
+        city: contactCity || 'Bhubaneswar',
+        category: contactType || 'Clinic',
+        notes: contactMessage || 'Demo Setup Contact Request Form',
+        plan_interested: 'Starter'
+      })
+    })
+    .then(parseResponse)
+    .then(leadsData => console.log('[CRM Integration] Contact request lead synchronization result:', leadsData))
+    .catch(leadsErr => console.error('[CRM Integration] Failed to sync contact request as CRM Lead:', leadsErr));
   };
 
   // Handle coupon trigger from Exit Intent or Offers
@@ -180,6 +356,15 @@ export default function App() {
     setContactBusiness(data.business);
     setContactPhone(data.phone);
     
+    // Smooth Integration: Link claim modal directly with Razorpay Checkout modal
+    setRazorpayPrefill(data);
+    setSelectedPlanDetails({
+      name: 'Starter',
+      price: 499,
+      billingCycle: 'monthly'
+    });
+    setIsRazorpayOpen(true);
+
     // Add a specialized mock row to indicate success
     const claimBooking: Appointment = {
       id: `offer-${Date.now()}`,
@@ -200,8 +385,8 @@ export default function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        to: 'frederic.soreng@gmail.com',
-        subject: `🎁 AppointO Coupon Activated: ₹1 Trial claimed by ${data.name}!`,
+        to: 'success@appointo.online',
+        subject: 'New Lead',
         html: `
           <div style="font-family: sans-serif; max-width: 600px; padding: 24px; border: 1px solid #ffd6a5; border-radius: 12px; background-color: #fffaf0;">
             <div style="background-color: #ff9f1c; color: white; padding: 16px; border-radius: 8px 8px 0 0; text-align: center;">
@@ -218,66 +403,79 @@ export default function App() {
               </div>
               <p><em>An onboarding specialist must reach out to the customer on WhatsApp coordinate within 2 hours.</em></p>
               <div style="margin-top: 30px; border-top: 1px solid #ffd6a5; padding-top: 20px; font-size: 11px; color: #8898aa;">
-                🔒 Compliant with standard service rules. Operated by Innovatronix IT Solutions LLP.
+                🔒 Compliant with standard service rules. Operated by Innovationix IT Solutions LLP.
               </div>
             </div>
           </div>
         `
       })
     })
-    .then(r => r.json())
+    .then(parseResponse)
     .then(data => console.log('[Email Integration] Claim offer notification dispatched:', data))
     .catch(err => console.error('[Email Integration] Failure to dispatch claim offer notification:', err));
   };
 
+  if (currentPage === 'crm' && adminUser) {
+    return (
+      <CrmDashboard
+        adminEmail={adminUser.email}
+        onLogout={() => {
+          setAdminUser(null);
+          setCurrentPage('home');
+        }}
+        darkMode={darkMode}
+      />
+    );
+  }
+
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-[#F8FAFC] text-slate-900'} transition-colors duration-300 font-sans antialiased`} id="appointo-app-shell">
+    <div className={`min-h-screen w-full overflow-x-hidden pb-16 md:pb-0 relative ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-[#F8FAFC] text-slate-900'} transition-colors duration-300 font-sans antialiased`} id="appointo-app-shell">
       
       {/* Sticky Navigation bar */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 transition-colors" id="app-header">
+      <header className="sticky top-0 z-40 bg-slate-950 text-white border-b border-slate-800" id="app-header">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-2 cursor-pointer transition active:scale-95" onClick={() => handleNavClick('home', 'hero')}>
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563EB] text-white shadow-md shadow-blue-500/20">
-                <Sparkles className="h-5.5 w-5.5 fill-white" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white border border-slate-800 shadow-md">
+                <Sparkles className="h-5.5 w-5.5 fill-white text-white" />
               </div>
-              <span className="text-xl font-extrabold tracking-tight font-sans text-slate-900 dark:text-white">
-                Appoint<span className="text-[#06B6D4]">O</span>
+              <span className="text-xl font-extrabold tracking-tight font-sans text-white">
+                Appoint<span className="text-white">O</span>
               </span>
             </div>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center gap-8 text-xs font-bold tracking-wider text-slate-600 dark:text-slate-350 uppercase">
-              <button onClick={() => handleNavClick('home', 'hero')} className="hover:text-[#2563EB] dark:hover:text-[#06B6D4] transition cursor-pointer text-left">Home</button>
-              <button onClick={() => handleNavClick('home', 'about')} className="hover:text-[#2563EB] dark:hover:text-[#06B6D4] transition cursor-pointer text-left">About</button>
-              <button onClick={() => handleNavClick('home', 'plans')} className="hover:text-[#2563EB] dark:hover:text-[#06B6D4] transition cursor-pointer text-left">Plans</button>
-              <button onClick={() => handleNavClick('home', 'contact')} className="hover:text-[#2563EB] dark:hover:text-[#06B6D4] transition cursor-pointer text-left">Contact</button>
+            <nav className="hidden md:flex items-center gap-8 text-xs font-bold tracking-wider text-slate-205 uppercase">
+              <button onClick={() => handleNavClick('home', 'hero')} className="hover:text-blue-400 text-slate-300 transition cursor-pointer text-left">Home</button>
+              <button onClick={() => handleNavClick('home', 'about')} className="hover:text-blue-400 text-slate-300 transition cursor-pointer text-left">About</button>
+              <button onClick={() => handleNavClick('home', 'plans')} className="hover:text-blue-400 text-slate-300 transition cursor-pointer text-left">Plans</button>
+              <button onClick={() => handleNavClick('home', 'contact')} className="hover:text-blue-400 text-slate-300 transition cursor-pointer text-left">Contact</button>
             </nav>
 
             {/* Actions (Premium Button, Toggle, Trial) */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3">
               {/* Dark mode switcher */}
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                className="rounded-lg p-1.5 sm:p-2 text-white hover:bg-slate-900"
                 title="Toggle visual style"
                 id="theme-toggler"
               >
-                {darkMode ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
+                {darkMode ? <Sun className="h-4.5 w-4.5 text-white" /> : <Moon className="h-4.5 w-4.5 text-white" />}
               </button>
 
               <button
-                onClick={() => triggerDemoWithIndustry('clinics')}
-                className="hidden sm:inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-705 shadow-sm hover:border-[#2563EB] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-[#06B6D4]"
+                onClick={() => setIsAdminLoginOpen(true)}
+                className="hidden sm:inline-flex rounded-xl border border-blue-600 bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/10 transition hover:bg-blue-700 hover:border-blue-700"
                 id="nav-login-btn"
               >
-                Login Desktop
+                Admin Login
               </button>
 
               <button
                 onClick={() => handleNavClick('home', 'plans')}
-                className="inline-flex rounded-xl bg-[#2563EB] px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 cursor-pointer"
+                className="inline-flex rounded-xl bg-white px-2.5 sm:px-4 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-slate-950 transition hover:bg-slate-200 cursor-pointer whitespace-nowrap"
                 id="nav-trial-btn"
               >
                 Start Trial @ ₹1
@@ -287,10 +485,40 @@ export default function App() {
         </div>
       </header>
 
+      {userSubscription && (
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 text-white text-center py-2.5 px-4 text-xs font-bold tracking-wider flex flex-col sm:flex-row items-center justify-center gap-2 animate-fadeIn shadow-sm border-b border-indigo-800" id="subscription-alert-ribbon">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            {userSubscription.status === 'TRIAL' ? (
+              <span>🛡️ <strong>Trial Active</strong>: You have <strong>{Math.max(0, Math.ceil((new Date(userSubscription.trial_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days remaining</strong> inside your free evaluation period! Accessing AppointO {userSubscription.plan_name} license. Mode: <strong>SANDBOX</strong></span>
+            ) : userSubscription.status === 'ACTIVE' ? (
+              <span>✓ <strong>Full License Active</strong>: AppointO {userSubscription.plan_name} active monthly plan has been verified. Mode: <strong>LIVE</strong></span>
+            ) : (
+              <span>⚠️ <strong>Subscription Status</strong>: {userSubscription.status}. Update billing coordinates inside your workspace.</span>
+            )}
+          </span>
+          <button
+            onClick={() => {
+              const doc = document.getElementById('tab-billing-dashboard');
+              if (doc) doc.click();
+              const sc = document.getElementById('hero-dashboard');
+              if (sc) sc.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="sm:ml-3 underline hover:text-cyan-200 text-[10px] font-black uppercase tracking-wider cursor-pointer bg-white/10 px-2 py-0.5 rounded transition hover:bg-white/20"
+            id="manage-billing-scroll-btn"
+          >
+            Manage Subscription &rarr;
+          </button>
+        </div>
+      )}
+
       {currentPage === 'home' ? (
         <>
           {/* SECTION 1 – HERO / HOME */}
-          <section id="hero" className="relative overflow-hidden pt-8 pb-16 lg:pt-14 lg:pb-24">
+          <section id="hero" className="relative overflow-hidden pt-8 pb-16 lg:pt-14 lg:pb-24 bg-slate-950 text-white border-b border-slate-800">
         {/* Animated Background Blobs */}
         <div className="absolute top-1/4 -left-16 -z-10 h-96 w-96 rounded-full bg-blue-400/10 blur-3xl animate-blob-1 pointer-events-none"></div>
         <div className="absolute top-1/3 -right-20 -z-10 h-[450px] w-[450px] rounded-full bg-cyan-400/10 blur-3xl animate-blob-2 pointer-events-none"></div>
@@ -299,30 +527,37 @@ export default function App() {
           <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
             
             {/* Left Content Column */}
-            <div className="lg:col-span-6 space-y-6">
+            <div className="lg:col-span-6 space-y-6 w-full max-w-full overflow-hidden">
               
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#2563EB] border border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/30">
-                <span className="flex h-2 w-2 rounded-full bg-[#2563EB] dark:bg-blue-400 animate-pulse"></span>
+              <div className="inline-flex items-center gap-2 rounded-full bg-blue-950/40 px-3 py-1 text-xs font-semibold text-blue-400 border border-blue-800/50" id="hero-badge-pill">
+                <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>
                 ✨ AI-Powered Appointment Management
               </div>
 
-              <h1 className="text-4xl font-black tracking-tight leading-none text-slate-900 dark:text-white sm:text-5xl lg:text-6.5xl">
-                Never Miss A <br/>
-                <span className="text-[#2563EB] dark:text-[#06B6D4] bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">Booking Again</span>
+              <h1 className="text-4xl font-black tracking-tight leading-tight text-white sm:text-5xl lg:text-6.5xl">
+                Never miss a <br/>
+                <span className="text-white bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">booking again.</span>
               </h1>
 
-              <p className="max-w-xl text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400 sm:text-base">
+              <p className="max-w-xl text-sm font-medium leading-relaxed text-slate-300 sm:text-base">
                 Automate appointments, reminders, follow-ups and customer management with AppointO’s AI-powered scheduling platform. Built for clinics, salons, dental centers, and growing service businesses.
               </p>
 
+              {/* Interactive Virtual Chatbot 'Eric' */}
+              <div className="py-2 w-full max-w-full overflow-hidden">
+                <div className="w-full max-w-full overflow-hidden">
+                  <EricChatbot />
+                </div>
+              </div>
+
               {/* Feature bullet list */}
-              <div className="grid grid-cols-2 gap-3 max-w-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-lg">
                 {[
                   'WhatsApp Booking', 'AI Reminders & Alerts', 
                   'Staff Allocation', 'Online UPI Payments', 'Multi-Business Support'
                 ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <div key={index} className="flex items-center gap-2 text-xs font-bold text-slate-200">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400 dark:bg-emerald-950/30 dark:text-emerald-400">
                       ✓
                     </span>
                     {item}
@@ -331,50 +566,54 @@ export default function App() {
               </div>
 
               {/* CTA triggers */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-3">
+              <div className="flex flex-col sm:flex-row gap-3 pt-3 w-full max-w-full sm:max-w-none">
                 <a
                   href="#plans"
-                  className="inline-flex items-center justify-center rounded-xl bg-[#2563EB] px-8 py-4 text-sm font-mono tracking-wider font-extrabold text-white shadow-xl shadow-blue-500/20 transition hover:bg-blue-700"
+                  className="inline-flex items-center justify-center rounded-xl bg-white px-3 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-sm font-mono tracking-tight sm:tracking-wider font-extrabold text-slate-950 shadow-xl transition hover:bg-slate-200 text-center w-full sm:w-auto"
                   id="hero-trial-btn"
                 >
                   Start 30-Day Trial @ ₹1
                 </a>
                 <button
-                  onClick={() => triggerDemoWithIndustry('clinics')}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200/80 bg-white px-8 py-4 text-sm font-bold text-slate-707 shadow-sm transition hover:border-[#2563EB] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-[#06B6D4]"
+                  onClick={() => handleNavClick('home', 'contact')}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-blue-600 bg-blue-600 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 hover:border-blue-700 text-center w-full sm:w-auto"
                   id="hero-demo-btn"
                 >
                   Book Free Demo
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 shrink-0" />
                 </button>
               </div>
 
               {/* Trust Indicators */}
-              <div className="flex flex-col gap-1 border-t border-slate-150 pt-5 dark:border-slate-900">
+              <div className="flex flex-col gap-1 border-t border-slate-800 pt-5">
                 <div className="flex gap-1">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                     <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-widest leading-none">
-                  ★★★★★ Trusted by Clinics, Salons & Service Businesses in India
+                <p className="text-[10px] sm:text-xs font-extrabold text-slate-400 uppercase tracking-wide sm:tracking-widest leading-snug sm:leading-none">
+                  ★★★★★ Trusted by Clinics, Salons & Services
                 </p>
               </div>
 
             </div>
 
             {/* Right Interactive Dashboard Mockup Column */}
-            <div className="lg:col-span-6">
-              <div className="relative">
+            <div className="lg:col-span-6 w-full max-w-full overflow-hidden">
+              <div className="relative w-full">
                 {/* Visual mesh borders background wrapper */}
                 <div className="absolute -inset-1.5 rounded-3xl bg-gradient-to-r from-blue-600 to-cyan-500 opacity-20 blur-md dark:opacity-30"></div>
                 
-                <DashboardMockup
-                  appointments={appointments}
-                  onToggleStatus={handleToggleStatus}
-                  onDeleteBooking={handleDeleteBooking}
-                  onTriggerDemoModal={() => triggerDemoWithIndustry('clinics')}
-                />
+                <div className="w-full max-w-full overflow-hidden rounded-2xl">
+                  <DashboardMockup
+                    appointments={appointments}
+                    onToggleStatus={handleToggleStatus}
+                    onDeleteBooking={handleDeleteBooking}
+                    onTriggerDemoModal={() => triggerDemoWithIndustry('clinics')}
+                    activeSubscription={userSubscription}
+                    onRefreshSubscription={fetchSubscriptionStatus}
+                  />
+                </div>
               </div>
             </div>
 
@@ -387,7 +626,7 @@ export default function App() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto space-y-3">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-[#2563EB] dark:text-[#06B6D4]">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-slate-950 dark:text-slate-200">
               Fully Automated Suite
             </span>
             <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">
@@ -434,13 +673,13 @@ export default function App() {
             ].map((card, idx) => (
               <div
                 key={idx}
-                className="group relative rounded-2xl border border-slate-100 bg-slate-50/50 p-6 transition duration-250 hover:border-blue-500/30 hover:bg-white hover:shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:hover:border-cyan-500/30"
+                className="group relative rounded-2xl border border-slate-100 bg-slate-50/50 p-6 transition duration-250 hover:border-slate-950/30 hover:bg-white hover:shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-500/30"
               >
                 <div className="text-2xl mb-4">{card.emoji}</div>
-                <h4 className="text-base font-extrabold text-slate-900 dark:text-white font-sans group-hover:text-blue-600 dark:group-hover:text-cyan-400">
+                <h4 className="text-base font-extrabold text-slate-900 dark:text-white font-sans group-hover:text-slate-950 dark:group-hover:text-slate-950">
                   {card.title}
                 </h4>
-                <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
+                <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-800">
                   {card.desc}
                 </p>
               </div>
@@ -461,18 +700,18 @@ export default function App() {
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {INDUSTRIES.map((ind) => (
                 <button
-                  key={ind.id}
-                  onClick={() => triggerDemoWithIndustry(ind.id)}
-                  className="group flex flex-col items-center rounded-2xl border border-slate-100 bg-slate-50 p-5 text-center transition duration-200 hover:scale-105 hover:bg-white hover:shadow-md dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
-                  id={`industry-launch-${ind.id}`}
+                   key={ind.id}
+                   onClick={() => triggerDemoWithIndustry(ind.id)}
+                   className="group flex flex-col items-center rounded-2xl border border-slate-100 bg-slate-50 p-5 text-center transition duration-200 hover:scale-105 hover:bg-white hover:shadow-md dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
+                   id={`industry-launch-${ind.id}`}
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 text-xl font-bold text-blue-600 transition group-hover:from-blue-600 group-hover:to-cyan-400 group-hover:text-white dark:text-cyan-400">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-500/10 to-slate-400/5 text-xl font-bold text-slate-950 transition group-hover:from-slate-950 group-hover:to-slate-900 group-hover:text-white dark:text-white dark:group-hover:text-slate-200">
                     {ind.emoji}
                   </div>
                   <h4 className="mt-3.5 text-xs font-extrabold text-slate-800 dark:text-white pointer-events-none">
                     {ind.name}
                   </h4>
-                  <span className="mt-1.5 inline-flex items-center gap-1 text-[9px] font-bold text-[#2563EB] opacity-0 group-hover:opacity-100 transition dark:text-[#06B6D4]">
+                  <span className="mt-1.5 inline-flex items-center gap-1 text-[9px] font-bold text-blue-600 group-hover:text-blue-700 dark:text-blue-400 dark:group-hover:text-blue-300 opacity-0 group-hover:opacity-100 transition" id={`industry-launch-demo-${ind.id}`}>
                     Launch Demo &rarr;
                   </span>
                 </button>
@@ -545,7 +784,7 @@ export default function App() {
               <div className="mt-8">
                 <button
                   onClick={() => handleOpenPaymentCheckout('Starter', 499, 'Billing: Monthly Plan')}
-                  className="block w-full rounded-xl bg-white text-center py-3 text-xs font-bold text-blue-700 shadow-lg transition hover:bg-blue-50 cursor-pointer"
+                  className="block w-full rounded-xl bg-white text-center py-3 text-xs font-bold text-slate-950 shadow-lg transition hover:bg-blue-50 cursor-pointer"
                   id="starter-cta"
                 >
                   Buy Now @ ₹499
@@ -554,13 +793,13 @@ export default function App() {
             </div>
 
             {/* PLAN 2 (FEATURED) */}
-            <div className="relative rounded-2xl bg-white p-7 text-slate-900 shadow-2xl flex flex-col justify-between scale-102 lg:scale-105 border-2 border-cyan-400" id="price-professional">
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-600 px-4 py-1 text-[10px] font-black tracking-widest text-white uppercase shadow-md leading-none">
+            <div className="relative rounded-2xl bg-white p-7 text-slate-900 shadow-2xl flex flex-col justify-between scale-100 lg:scale-105 hover:scale-102 lg:hover:scale-107 transform transition duration-300 border-2 border-slate-900" id="price-professional">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-950 px-4 py-1 text-[10px] font-black tracking-widest text-white uppercase shadow-md leading-none">
                 POPULAR CHOICE
               </span>
               
               <div>
-                <span className="text-xs font-bold tracking-widest uppercase text-blue-600">Professional</span>
+                <span className="text-xs font-bold tracking-widest uppercase text-slate-950">Professional</span>
                 <div className="mt-2 flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-slate-900">₹999</span>
                   <span className="text-xs text-slate-505">/month</span>
@@ -569,12 +808,12 @@ export default function App() {
                 
                 <div className="mt-6 border-t border-slate-100 pt-6">
                   <ul className="space-y-3.5 text-xs text-slate-705 font-semibold">
-                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-[#2563EB]/10 text-blue-600 rounded shrink-0" /> <strong className="text-slate-900">Everything in Starter</strong></li>
-                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-[#2563EB]/10 text-blue-600 rounded shrink-0" /> AI Scheduling Assistant</li>
-                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-[#2563EB]/10 text-blue-600 rounded shrink-0" /> Automated Staff Allocation</li>
-                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-[#2563EB]/10 text-blue-600 rounded shrink-0" /> Full Analytics KPI Dashboard</li>
-                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-[#2563EB]/10 text-blue-600 rounded shrink-0" /> Advanced CRM Suite</li>
-                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-[#2563EB]/10 text-blue-600 rounded shrink-0" /> Razorpay Unified Payments</li>
+                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> <strong className="text-slate-900">Everything in Starter</strong></li>
+                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> AI Scheduling Assistant</li>
+                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> Automated Staff Allocation</li>
+                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> Full Analytics KPI Dashboard</li>
+                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> Advanced CRM Suite</li>
+                    <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> Razorpay Unified Payments</li>
                   </ul>
                 </div>
               </div>
@@ -648,7 +887,7 @@ export default function App() {
 
               <button
                 onClick={() => handleOpenPaymentCheckout('Onboarding Setup', 1, 'Billing: 30-Day Active Trial Deposit')}
-                className="whitespace-nowrap rounded-xl bg-[#22C55E] px-6 py-3.5 text-xs font-extrabold text-[#022C22] shadow-lg transition hover:bg-emerald-400 cursor-pointer"
+                className="rounded-xl bg-[#22C55E] px-5 sm:px-6 py-3.5 text-xs font-extrabold text-[#022C22] shadow-lg transition hover:bg-emerald-400 cursor-pointer w-full sm:w-auto text-center sm:whitespace-nowrap whitespace-normal"
                 id="pricing-claim-banner-btn"
               >
                 Claim ₹1 Special Offer Now
@@ -663,7 +902,7 @@ export default function App() {
       <section className="py-16 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-[#2563EB] dark:text-[#06B6D4]">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-slate-955 dark:text-slate-200">
               Clear Doubts
             </span>
             <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -683,7 +922,7 @@ export default function App() {
             {/* Left Contact Coordinates Info */}
             <div className="lg:col-span-5 space-y-6">
               <div className="space-y-2">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-[#06B6D4]">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-slate-955 dark:text-slate-200">
                   Grow With AppointO
                 </span>
                 <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
@@ -698,36 +937,36 @@ export default function App() {
                 
                 {/* Card Call */}
                 <div className="flex gap-4 rounded-2xl border border-slate-150 bg-white p-4.5 dark:border-slate-900 dark:bg-slate-900/50">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-950 dark:bg-slate-900 dark:text-white">
                     <Phone className="h-5 w-5" />
                   </span>
                   <div>
                     <h4 className="text-xs font-extrabold text-slate-900 dark:text-white block uppercase tracking-wider">Call Us Help</h4>
-                    <p className="text-xs font-semibold text-[#2563EB] dark:text-[#06B6D4] mt-0.5">+91 8104530286</p>
+                    <p className="text-xs font-sans font-extrabold text-slate-955 dark:text-white mt-0.5">+91 8104530286</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">Supported in English, Hindi, and local languages</p>
                   </div>
                 </div>
 
                 {/* Card Email */}
                 <div className="flex gap-4 rounded-2xl border border-slate-150 bg-white p-4.5 dark:border-slate-900 dark:bg-slate-900/50">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-500 dark:bg-cyan-900/30 dark:text-cyan-405">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-950 dark:bg-slate-900 dark:text-white">
                     <Mail className="h-5 w-5" />
                   </span>
                   <div>
                     <h4 className="text-xs font-extrabold text-slate-900 dark:text-white block uppercase tracking-wider">Email Customer Support</h4>
-                    <p className="text-xs font-semibold text-[#2563EB] dark:text-[#06B6D4] mt-0.5">success@appointo.online</p>
+                    <p className="text-xs font-sans font-extrabold text-slate-955 dark:text-white mt-0.5">success@appointo.online</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">Replies generated instantly within 3 hours</p>
                   </div>
                 </div>
 
                 {/* Card Location */}
                 <div className="flex gap-4 rounded-2xl border border-slate-150 bg-white p-4.5 dark:border-slate-900 dark:bg-slate-900/50">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 dark:bg-orange-900/30 dark:text-orange-400">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-950 dark:bg-slate-900 dark:text-white">
                     <MapPin className="h-5 w-5" />
                   </span>
                   <div>
                     <h4 className="text-xs font-extrabold text-slate-900 dark:text-white block uppercase tracking-wider">Office Address</h4>
-                    <p className="text-xs font-semibold text-[#2563EB] dark:text-[#06B6D4] mt-0.5">Innovatronix IT Solutions LLP</p>
+                    <p className="text-xs font-sans font-extrabold text-slate-955 dark:text-white mt-0.5">Innovationix IT Solutions LLP</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">N3-IRC Village, Nayapali, Bhubaneswar, Odisha-751015</p>
                   </div>
                 </div>
@@ -742,7 +981,7 @@ export default function App() {
                     <button
                       key={social}
                       onClick={() => alert(`Redirecting to AppointO official ${social} account (Simulation)`)}
-                      className="rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-bold text-slate-705 transition hover:border-[#2563EB] hover:text-[#2563EB] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-[#06B6D4]"
+                      className="rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-bold text-slate-705 transition hover:border-slate-955 hover:text-slate-955 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white"
                     >
                       {social}
                     </button>
@@ -807,6 +1046,11 @@ export default function App() {
                         setContactName('');
                         setContactBusiness('');
                         setContactPhone('');
+                        setContactEmail('');
+                        setContactCity('');
+                        setContactMessage('');
+                        setTouchedFields({});
+                        setContactErrors({});
                       }}
                       className="mt-8 rounded-xl bg-slate-100 px-6 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-white"
                       id="reset-form-btn"
@@ -834,10 +1078,19 @@ export default function App() {
                           type="text"
                           required
                           value={contactName}
-                          onChange={(e) => setContactName(e.target.value)}
+                          onChange={(e) => handleNameChange(e.target.value)}
                           placeholder="e.g. Dr. Anand Deshmukh"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
+                            contactErrors.name
+                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                          }`}
                         />
+                        {contactErrors.name && (
+                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                            ⚠️ {contactErrors.name}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -848,10 +1101,19 @@ export default function App() {
                           type="text"
                           required
                           value={contactBusiness}
-                          onChange={(e) => setContactBusiness(e.target.value)}
+                          onChange={(e) => handleBusinessChange(e.target.value)}
                           placeholder="e.g. Dental Care Center"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
+                            contactErrors.business
+                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                          }`}
                         />
+                        {contactErrors.business && (
+                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                            ⚠️ {contactErrors.business}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -864,10 +1126,19 @@ export default function App() {
                           type="tel"
                           required
                           value={contactPhone}
-                          onChange={(e) => setContactPhone(e.target.value)}
+                          onChange={(e) => handlePhoneChange(e.target.value)}
                           placeholder="e.g. 98765 43210 (with country code)"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
+                            contactErrors.phone
+                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                          }`}
                         />
+                        {contactErrors.phone && (
+                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                            ⚠️ {contactErrors.phone}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -877,10 +1148,19 @@ export default function App() {
                         <input
                           type="email"
                           value={contactEmail}
-                          onChange={(e) => setContactEmail(e.target.value)}
+                          onChange={(e) => handleEmailChange(e.target.value)}
                           placeholder="anand@gmail.com"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
+                            contactErrors.email
+                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                          }`}
                         />
+                        {contactErrors.email && (
+                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                            ⚠️ {contactErrors.email}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -911,10 +1191,19 @@ export default function App() {
                           type="text"
                           required
                           value={contactCity}
-                          onChange={(e) => setContactCity(e.target.value)}
+                          onChange={(e) => handleCityChange(e.target.value)}
                           placeholder="e.g. Nagpur / Patna"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
+                            contactErrors.city
+                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                          }`}
                         />
+                        {contactErrors.city && (
+                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                            ⚠️ {contactErrors.city}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -952,7 +1241,7 @@ export default function App() {
       </section>
         </>
       ) : (
-        <SubPages initialPage={currentPage} onNavigate={(p) => handleNavClick(p)} darkMode={darkMode} />
+        <SubPages initialPage={currentPage} onNavigate={(p, s) => handleNavClick(p, s)} darkMode={darkMode} />
       )}
 
       {/* SECTION 5 – FOOTER */}
@@ -1008,7 +1297,9 @@ export default function App() {
                   <li><button onClick={() => handleNavClick('blog')} className="hover:text-blue-400 text-left cursor-pointer">Blog</button></li>
                   <li><button onClick={() => handleNavClick('help')} className="hover:text-blue-400 text-left cursor-pointer">Help Center</button></li>
                   <li><button onClick={() => handleNavClick('privacy')} className="hover:text-blue-400 text-left cursor-pointer">Privacy Policy</button></li>
-                  <li><button onClick={() => handleNavClick('terms')} className="hover:text-blue-400 text-left cursor-pointer">Terms</button></li>
+                  <li><button onClick={() => handleNavClick('terms')} className="hover:text-blue-400 text-left cursor-pointer">Terms & Conditions</button></li>
+                  <li><button onClick={() => handleNavClick('refunds')} className="hover:text-blue-400 text-left cursor-pointer">Refunds & Cancellations</button></li>
+                  <li><button onClick={() => handleNavClick('shipping')} className="hover:text-blue-400 text-left cursor-pointer">Shipping & Digital Delivery</button></li>
                 </ul>
               </div>
             </div>
@@ -1084,7 +1375,101 @@ export default function App() {
         onClose={() => setIsRazorpayOpen(false)}
         selectedPlan={selectedPlanDetails}
         darkMode={darkMode}
+        onSubscriptionActivated={fetchSubscriptionStatus}
+        prefillData={razorpayPrefill}
       />
+
+      {/* Admin Login Modal Portal */}
+      <AdminLoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onLoginSuccess={(data) => {
+          setAdminUser(data);
+          setCurrentPage('crm');
+        }}
+      />
+
+      {/* PWA-style Bottom Navigation Bar for Mobile */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-slate-900/95 dark:bg-slate-950/98 backdrop-blur-md border-t border-slate-800 px-4 py-2 pb-safe shadow-2xl"
+        id="pwa-mobile-nav"
+      >
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          {/* Home Tab */}
+          <button 
+            onClick={() => handleNavClick('home', 'hero')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              currentPage === 'home' 
+                ? 'text-blue-400 font-extrabold scale-105' 
+                : 'text-slate-400 dark:text-slate-500 hover:text-white'
+            }`}
+            id="mobile-tab-home"
+          >
+            <Home className="h-5 w-5 mb-0.5" />
+            <span className="text-[10px] tracking-wide uppercase">Home</span>
+          </button>
+
+          {/* Simulate Book / Demo Tab (Action Center) */}
+          <button 
+            onClick={() => triggerDemoWithIndustry('clinics')}
+            className="flex flex-col items-center justify-center flex-1 py-1"
+            id="mobile-tab-demo"
+          >
+            <div className="relative flex items-center justify-center h-10 w-10 -mt-6 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-xl shadow-blue-500/20 active:scale-90 transition transform duration-155 border-4 border-slate-900 dark:border-slate-950">
+              <Sparkles className="h-4.5 w-4.5 fill-white text-white animate-pulse" />
+            </div>
+            <span className="text-[10px] tracking-wide uppercase font-extrabold text-blue-400 dark:text-cyan-400">Demo</span>
+          </button>
+
+          {/* Plans Tab */}
+          <button 
+            onClick={() => handleNavClick('home', 'plans')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              currentPage === 'home' && window.location.hash === '#plans'
+                ? 'text-blue-400 font-extrabold scale-105' 
+                : 'text-slate-400 dark:text-slate-500 hover:text-white'
+            }`}
+            id="mobile-tab-plans"
+          >
+            <CreditCard className="h-5 w-5 mb-0.5" />
+            <span className="text-[10px] tracking-wide uppercase">Plans</span>
+          </button>
+
+          {/* Admin CRM Tab */}
+          <button 
+            onClick={() => {
+              if (adminUser) {
+                setCurrentPage('crm');
+              } else {
+                setIsAdminLoginOpen(true);
+              }
+            }}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              currentPage === 'crm' 
+                ? 'text-blue-400 font-extrabold scale-105' 
+                : 'text-slate-400 dark:text-slate-500 hover:text-white'
+            }`}
+            id="mobile-tab-admin"
+          >
+            <Key className="h-5 w-5 mb-0.5" />
+            <span className="text-[10px] tracking-wide uppercase">Admin</span>
+          </button>
+
+          {/* Support Tab */}
+          <button 
+            onClick={() => handleNavClick('help')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              currentPage === 'help' || currentPage === 'privacy' || currentPage === 'terms' || currentPage === 'refunds' || currentPage === 'shipping'
+                ? 'text-blue-400 font-extrabold scale-105' 
+                : 'text-slate-400 dark:text-slate-500 hover:text-white font-bold'
+            }`}
+            id="mobile-tab-support"
+          >
+            <HelpCircle className="h-5 w-5 mb-0.5" />
+            <span className="text-[10px] tracking-wide uppercase">Support</span>
+          </button>
+        </div>
+      </div>
 
     </div>
   );

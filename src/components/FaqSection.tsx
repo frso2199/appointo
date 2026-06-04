@@ -26,7 +26,7 @@ export default function FaqSection() {
               id={`faq-trigger-${faq.id}`}
             >
               <div className="flex gap-3 pr-4">
-                <HelpCircle className="mt-0.5 h-4.5 w-4.5 shrink-0 text-blue-500" />
+                <HelpCircle className="mt-0.5 h-4.5 w-4.5 shrink-0 text-slate-950 dark:text-white" />
                 <span className="text-sm font-bold text-slate-900 dark:text-white sm:text-base">
                   {faq.question}
                 </span>

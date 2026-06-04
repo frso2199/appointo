@@ -61,7 +61,7 @@ export default function TestimonialsCarousel() {
                   <h4 className="font-extrabold text-slate-900 dark:text-white text-base">
                     {active.name}
                   </h4>
-                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  <p className="text-xs font-semibold text-slate-950 dark:text-white">
                     {active.role} • <span className="text-slate-500 dark:text-slate-400 font-medium">{active.business}</span>
                   </p>
                 </div>
@@ -73,14 +73,14 @@ export default function TestimonialsCarousel() {
           <div className="absolute bottom-6 right-8 flex gap-2">
             <button
               onClick={prevSlide}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               id="carousel-prev"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               onClick={nextSlide}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               id="carousel-next"
             >
               <ChevronRight className="h-5 w-5" />

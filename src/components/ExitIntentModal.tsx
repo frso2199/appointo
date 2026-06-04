@@ -13,6 +13,7 @@ export default function ExitIntentModal({ onClaimOffer }: ExitIntentModalProps) 
   const [business, setBusiness] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errorText, setErrorText] = useState('');
 
   useEffect(() => {
     // Detect mouse leave viewport (exit intent)
@@ -31,10 +32,20 @@ export default function ExitIntentModal({ onClaimOffer }: ExitIntentModalProps) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !business) return;
+    if (!name || !phone || !business) {
+      setErrorText('Please fill in all fields.');
+      return;
+    }
 
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setErrorText('WhatsApp number must be exactly 10 digits.');
+      return;
+    }
+
+    setErrorText('');
     setIsSubmitted(true);
-    onClaimOffer({ name, business, phone });
+    onClaimOffer({ name, business, phone: cleanPhone });
     
     // Auto close after 3 seconds of success animation
     setTimeout(() => {
@@ -125,18 +136,32 @@ export default function ExitIntentModal({ onClaimOffer }: ExitIntentModalProps) 
 
                   <div>
                     <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400">
-                      WhatsApp Phone Number:
+                      WhatsApp Phone Number (10 digits):
                     </label>
                     <input
                       type="tel"
                       required
+                      maxLength={10}
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        const cleanVal = e.target.value.replace(/\D/g, '');
+                        if (cleanVal.length <= 10) {
+                          setPhone(cleanVal);
+                          if (errorText) setErrorText('');
+                        }
+                      }}
                       placeholder="e.g. 9876543210"
                       className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                     />
                   </div>
                 </div>
+
+                {errorText && (
+                  <div className="rounded-xl bg-orange-50 border border-orange-200 p-3 text-xs text-orange-850 font-medium flex items-center gap-2 dark:bg-orange-950/20 dark:border-orange-900/30 dark:text-orange-400">
+                    <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse shrink-0" />
+                    <span>{errorText}</span>
+                  </div>
+                )}
 
                 <button
                   type="submit"

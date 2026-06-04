@@ -223,18 +223,18 @@ export default function BookingDemoModal({
             </div>
 
             {/* Steps indicator */}
-            <div className="flex border-b border-slate-100 px-6 py-3 dark:border-slate-800 dark:bg-slate-900/10">
-              <div className="flex items-center gap-2 text-xs font-semibold">
-                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>1</span>
-                <span className={`${step >= 1 ? 'text-slate-900 dark:text-slate-200 font-bold' : 'text-slate-400'}`}>Business & Selection</span>
+            <div className="flex border-b border-slate-100 px-4 sm:px-6 py-2.5 dark:border-slate-800 dark:bg-slate-900/10">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-semibold">
+                <span className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full text-[9px] ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>1</span>
+                <span className={`${step >= 1 ? 'text-slate-900 dark:text-slate-200 font-bold' : 'text-slate-300'}`}>Selection</span>
                 <span className="text-slate-300">/</span>
-                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>2</span>
-                <span className={`${step >= 2 ? 'text-slate-900 dark:text-slate-200 font-bold' : 'text-slate-400'}`}>Customer Information</span>
+                <span className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full text-[9px] ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>2</span>
+                <span className={`${step >= 2 ? 'text-slate-900 dark:text-slate-200 font-bold' : 'text-slate-450'}`}>Customer Details</span>
               </div>
             </div>
 
             {/* Body */}
-            <div className="max-h-[70vh] overflow-y-auto p-6">
+            <div className="max-h-[70vh] overflow-y-auto p-4 sm:p-6">
               {step === 1 ? (
                 <div className="space-y-6">
                   {/* Select Industry */}
