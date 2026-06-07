@@ -4,7 +4,8 @@ import {
   Sparkles, Check, Star, CheckCircle2, ChevronRight, Phone, Mail, 
   MapPin, Clock, Globe, Shield, Send, ArrowRight, Activity, 
   Scissors, Car, HeartPulse, Briefcase, Plus, Moon, Sun, Laptop, 
-  Smile, UserCheck, Key, RefreshCcw, Landmark, Home, CreditCard, HelpCircle
+  Smile, UserCheck, Key, RefreshCcw, Landmark, Home, CreditCard, HelpCircle,
+  Calendar, Bot, MessageSquare, Users, BarChart3, Building2, X, Megaphone
 } from 'lucide-react';
 
 import { INDUSTRIES, INITIAL_APPOINTMENTS } from './data';
@@ -20,6 +21,7 @@ import RazorpayCheckoutModal from './components/RazorpayCheckoutModal';
 import EricChatbot from './components/EricChatbot';
 import AdminLoginModal from './components/AdminLoginModal';
 import CrmDashboard from './components/CrmDashboard';
+import confetti from 'canvas-confetti';
 
 const parseResponse = async (r: Response) => {
   const contentType = r.headers.get('content-type');
@@ -85,6 +87,59 @@ export default function App() {
   const [isContactSubmitted, setIsContactSubmitted] = useState(false);
   const [contactSuccessTimer, setContactSuccessTimer] = useState(0);
 
+  // Geolocation storage for automated country flag displays
+  const [detectedCountry, setDetectedCountry] = useState<{ code: string; flag: string } | null>(null);
+
+  // IP-based geolocation check upon the initial load of #demo-form-box
+  useEffect(() => {
+    const detectInferredRegion = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        if (response.ok) {
+          const info = await response.json();
+          if (info) {
+            // Map 2-letter country code to flag emojis
+            const flagMap: Record<string, string> = {
+              US: '🇺🇸', CA: '🇨🇦', GB: '🇬🇧', IN: '🇮🇳', AE: '🇦🇪', SG: '🇸🇬', AU: '🇦🇺',
+              FR: '🇫🇷', DE: '🇩🇪', JP: '🇯🇵', BR: '🇧🇷', ZA: '🇿🇦', RU: '🇷🇺', ES: '🇪🇸',
+              IT: '🇮🇹', CH: '🇨🇭', NL: '🇳🇱', SE: '🇸🇪', NO: '🇳🇴', FI: '🇫🇮', DK: '🇩🇰',
+              BE: '🇧🇪', IE: '🇮🇪', NZ: '🇳🇿', MX: '🇲🇽', SA: '🇸🇦', CO: '🇨🇴', ID: '🇮🇩',
+              MY: '🇲🇾', TH: '🇹🇭', VN: '🇻🇳', PH: '🇵🇭', TR: '🇹🇷', KR: '🇰🇷', UA: '🇺🇦'
+            };
+
+            const code = info.country_code || 'IN';
+            const flag = flagMap[code] || '🌐';
+
+            setDetectedCountry({ code, flag });
+
+            // Auto-populate the input field's country prefix if empty
+            if (info.country_calling_code) {
+              setContactPhone(prev => {
+                if (!prev || prev.trim() === '') {
+                  return `${info.country_calling_code} `;
+                }
+                return prev;
+              });
+            }
+
+            // Auto-populate the city as well to delight the user
+            if (info.city) {
+              setContactCity(prev => {
+                if (!prev || prev.trim() === '') {
+                  return info.city;
+                }
+                return prev;
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Geolocation IP-based region lookup could not resolve or was blocked/rate-limited:', err);
+      }
+    };
+    detectInferredRegion();
+  }, []);
+
   // Real-time validation states
   const [contactErrors, setContactErrors] = useState<{
     name?: string;
@@ -101,6 +156,40 @@ export default function App() {
     email?: boolean;
     city?: boolean;
   }>({});
+
+  // Dynamic status of form completion for required fields
+  const getFormProgress = () => {
+    let completed = 0;
+    const requirements = [
+      contactName.trim().length >= 2 && /^[A-Za-z\s.\-']+$/.test(contactName.trim()),
+      contactBusiness.trim().length >= 2,
+      (/^\+?[0-9]{10,15}$/.test(contactPhone.replace(/[\s\-()]/g, ''))),
+      contactCity.trim().length >= 2
+    ];
+    requirements.forEach(req => {
+      if (req) completed++;
+    });
+    return Math.round((completed / requirements.length) * 100);
+  };
+
+  // High-performance Confetti activation state for 100% form completion
+  const [hasPlayedConfetti, setHasPlayedConfetti] = useState(false);
+  const currentProgress = getFormProgress();
+
+  useEffect(() => {
+    if (currentProgress === 100) {
+      if (!hasPlayedConfetti) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.75 }
+        });
+        setHasPlayedConfetti(true);
+      }
+    } else {
+      setHasPlayedConfetti(false);
+    }
+  }, [currentProgress, hasPlayedConfetti]);
 
   // Real-time validation engine
   useEffect(() => {
@@ -172,7 +261,56 @@ export default function App() {
   };
 
   const handlePhoneChange = (val: string) => {
-    setContactPhone(val);
+    // Save cursor/backspace context by looking at digit patterns
+    const digitsOnly = val.replace(/\D/g, '');
+    let formatted = val;
+
+    if (val.startsWith('+')) {
+      // Keep explicit +
+      if (digitsOnly.startsWith('91')) {
+        const rest = digitsOnly.substring(2);
+        if (rest.length === 0) {
+          formatted = '+91 ';
+        } else if (rest.length <= 5) {
+          formatted = `+91 ${rest}`;
+        } else {
+          formatted = `+91 ${rest.substring(0, 5)} ${rest.substring(5, 10)}`;
+        }
+      } else {
+        // general format for other custom country codes (+XXX XXX XXX)
+        if (digitsOnly.length <= 3) {
+          formatted = `+${digitsOnly}`;
+        } else if (digitsOnly.length <= 7) {
+          formatted = `+${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3)}`;
+        } else {
+          formatted = `+${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 7)} ${digitsOnly.substring(7, 12)}`;
+        }
+      }
+    } else {
+      // No explicit + sign entered
+      if (digitsOnly.length === 0) {
+        formatted = '';
+      } else if (digitsOnly.length === 10) {
+        // When exactly 10 digits are inputted, auto-format with country prefix +91
+        formatted = `+91 ${digitsOnly.substring(0, 5)} ${digitsOnly.substring(5, 10)}`;
+      } else if (digitsOnly.length > 10) {
+        if (digitsOnly.startsWith('91')) {
+          const rest = digitsOnly.substring(2);
+          formatted = `+91 ${rest.substring(0, 5)} ${rest.substring(5, 10)}`;
+        } else {
+          formatted = `+${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 8)} ${digitsOnly.substring(8, 13)}`;
+        }
+      } else {
+        // Simple spaces as typing progresses
+        if (digitsOnly.length <= 5) {
+          formatted = digitsOnly;
+        } else {
+          formatted = `${digitsOnly.substring(0, 5)} ${digitsOnly.substring(5)}`;
+        }
+      }
+    }
+
+    setContactPhone(formatted);
     setTouchedFields(prev => ({ ...prev, phone: true }));
   };
 
@@ -390,11 +528,11 @@ export default function App() {
         html: `
           <div style="font-family: sans-serif; max-width: 600px; padding: 24px; border: 1px solid #ffd6a5; border-radius: 12px; background-color: #fffaf0;">
             <div style="background-color: #ff9f1c; color: white; padding: 16px; border-radius: 8px 8px 0 0; text-align: center;">
-              <h2 style="margin: 0;">🎁 Exclusive ₹1 Trial Claimed!</h2>
+              <h2 style="margin: 0;">🎁 Exclusive ₹99 Trial Claimed!</h2>
             </div>
             <div style="padding: 20px;">
               <p>Hello AppointO Success desk,</p>
-              <p>A customer has successfully claimed the <strong>₹1 AppointO Onboarding Trial offer</strong> via the Exit-Intent Promotion Overlay!</p>
+              <p>A customer has successfully claimed the <strong>₹99 AppointO Onboarding Trial offer</strong> via the Exit-Intent Promotion Overlay!</p>
               <div style="background: white; border: 1px solid #ffd6a5; padding: 16px; border-radius: 8px; margin: 15px 0;">
                 <p style="margin: 4px 0;"><strong>Customer Name:</strong> ${data.name}</p>
                 <p style="margin: 4px 0;"><strong>Clinic / Business Name:</strong> ${data.business}</p>
@@ -478,7 +616,7 @@ export default function App() {
                 className="inline-flex rounded-xl bg-white px-2.5 sm:px-4 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-slate-950 transition hover:bg-slate-200 cursor-pointer whitespace-nowrap"
                 id="nav-trial-btn"
               >
-                Start Trial @ ₹1
+                Start Trial @ ₹99
               </button>
             </div>
           </div>
@@ -572,7 +710,7 @@ export default function App() {
                   className="inline-flex items-center justify-center rounded-xl bg-white px-3 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-sm font-mono tracking-tight sm:tracking-wider font-extrabold text-slate-950 shadow-xl transition hover:bg-slate-200 text-center w-full sm:w-auto"
                   id="hero-trial-btn"
                 >
-                  Start 30-Day Trial @ ₹1
+                  Start 30-Day Trial @ ₹99
                 </a>
                 <button
                   onClick={() => handleNavClick('home', 'contact')}
@@ -588,7 +726,7 @@ export default function App() {
               <div className="flex flex-col gap-1 border-t border-slate-800 pt-5">
                 <div className="flex gap-1">
                   {[...Array(5)].map((_, i) => (
-                     <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                     <Star key={`hero-star-${i}`} className="h-4 w-4 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
                 <p className="text-[10px] sm:text-xs font-extrabold text-slate-400 uppercase tracking-wide sm:tracking-widest leading-snug sm:leading-none">
@@ -632,7 +770,7 @@ export default function App() {
             <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">
               Why Businesses Choose AppointO
             </h2>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-450 leading-relaxed">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
               Everything you need to manage appointments, customers and staff from one powerful platform. Say goodbye to manual rosters, missed missed text pings and physical record sheets.
             </p>
           </div>
@@ -641,48 +779,67 @@ export default function App() {
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
               {
-                emoji: '📅',
+                icon: Calendar,
                 title: 'Smart Appointment Scheduling',
                 desc: 'Allow customers to book online 24/7. Your custom dashboard takes requests off-peak and allocates staff calendars smoothly.'
               },
               {
-                emoji: '🤖',
+                icon: Bot,
                 title: 'AI Powered Reminders',
                 desc: 'Reduce no-shows through automated check-in triggers. Reminds visitors of set timing structures programmatically.'
               },
               {
-                emoji: '💬',
+                icon: MessageSquare,
                 title: 'WhatsApp Integration',
                 desc: 'Send confirmations, receipt PDFs, and scheduling alerts automatically from official Cloud API links.'
               },
               {
-                emoji: '👥',
+                icon: Phone,
+                title: 'Voice Calls for Follow-up',
+                desc: 'Connect with your clients through interactive voice calls for automated feedback and confirmations. A better way of communication.'
+              },
+              {
+                icon: Globe,
+                title: 'Website (Bundled)',
+                desc: 'Enjoy an immediate online presence with your own customized brand page, integrated booking flows, and detailed service offerings.'
+              },
+              {
+                icon: Megaphone,
+                title: 'Digital Marketing',
+                desc: 'Deploy smart target campaigns and lead generation templates built directly into AppointO to gain high-quality leads for your business.'
+              },
+              {
+                icon: Users,
                 title: 'Customer Management',
                 desc: 'Maintain complete client cards, historic notes, vaccination charts, or skin-treatment histories in secure logs.'
               },
               {
-                emoji: '📊',
+                icon: BarChart3,
                 title: 'Reports & Analytics',
                 desc: 'Track completed bookings, cash-in revenue metrics, and identify your absolute peak-retention weekdays at a single glance.'
               },
               {
-                emoji: '🏢',
+                icon: Building2,
                 title: 'Multi-Industry Solution',
                 desc: 'Specifically pre-customized templates built for dental offices, general clinics, hairdressing spa centers, and auto services.'
               }
             ].map((card, idx) => (
-              <div
+              <motion.div
                 key={idx}
-                className="group relative rounded-2xl border border-slate-100 bg-slate-50/50 p-6 transition duration-250 hover:border-slate-950/30 hover:bg-white hover:shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-500/30"
+                whileHover={{ y: -5 }}
+                className="group relative rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-900 to-black p-6 transition duration-300 hover:border-blue-400/40 hover:shadow-2xl hover:shadow-blue-500/20"
               >
-                <div className="text-2xl mb-4">{card.emoji}</div>
-                <h4 className="text-base font-extrabold text-slate-900 dark:text-white font-sans group-hover:text-slate-950 dark:group-hover:text-slate-950">
+                <div className="mb-4 inline-flex p-3 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
+                  <card.icon className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-extrabold text-white font-sans">
                   {card.title}
                 </h4>
-                <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-800">
+                <p className="mt-2 text-xs font-medium leading-relaxed text-blue-100/90">
                   {card.desc}
                 </p>
-              </div>
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-b-2xl"></div>
+              </motion.div>
             ))}
           </div>
 
@@ -753,7 +910,7 @@ export default function App() {
               Simple Pricing. Powerful Features.
             </h2>
             <p className="text-sm font-medium text-blue-100 max-w-xl mx-auto">
-              Start for just ₹1 and scale as your business grows. No hidden cloud setup costs, no contracts, cancel at any time.
+              Start for just ₹99 and scale as your business grows. No hidden cloud setup costs, no contracts, cancel at any time.
             </p>
           </div>
 
@@ -793,7 +950,7 @@ export default function App() {
             </div>
 
             {/* PLAN 2 (FEATURED) */}
-            <div className="relative rounded-2xl bg-white p-7 text-slate-900 shadow-2xl flex flex-col justify-between scale-100 lg:scale-105 hover:scale-102 lg:hover:scale-107 transform transition duration-300 border-2 border-slate-900" id="price-professional">
+            <div className="relative rounded-2xl bg-white p-7 text-slate-900 shadow-2xl flex flex-col justify-between scale-100 lg:scale-105 hover:scale-102 lg:hover:scale-107 transform transition duration-300 border border-slate-100 dark:border-slate-800" id="price-professional">
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-950 px-4 py-1 text-[10px] font-black tracking-widest text-white uppercase shadow-md leading-none">
                 POPULAR CHOICE
               </span>
@@ -802,12 +959,12 @@ export default function App() {
                 <span className="text-xs font-bold tracking-widest uppercase text-slate-950">Professional</span>
                 <div className="mt-2 flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-slate-900">₹999</span>
-                  <span className="text-xs text-slate-505">/month</span>
+                  <span className="text-xs text-slate-500">/month</span>
                 </div>
                 <p className="mt-2 text-xs text-slate-500 font-semibold">Ideal for clinics, hair salons, and physical therapy hubs.</p>
                 
                 <div className="mt-6 border-t border-slate-100 pt-6">
-                  <ul className="space-y-3.5 text-xs text-slate-705 font-semibold">
+                  <ul className="space-y-3.5 text-xs text-slate-700 font-semibold">
                     <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> <strong className="text-slate-900">Everything in Starter</strong></li>
                     <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> AI Scheduling Assistant</li>
                     <li className="flex gap-2"><Check className="h-4 p-0.5 bg-slate-900/10 text-slate-950 rounded shrink-0" /> Automated Staff Allocation</li>
@@ -871,14 +1028,14 @@ export default function App() {
                 <span className="inline-flex rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 px-3 py-0.5 text-[10px] font-black uppercase tracking-wider">
                   🎉 Limited Time Flagship Offer
                 </span>
-                <h3 className="text-xl font-bold font-sans">Get Your Dedicated Onboarding @ ₹1 Only</h3>
+                <h3 className="text-xl font-bold font-sans">Get Your Dedicated Onboarding @ ₹99 Only</h3>
                 <p className="text-xs text-blue-105 font-semibold">
                   Includes: Free QR Code designs, Hands-on staff walk-throughs, and free WhatsApp Sandbox configurations.
                 </p>
                 
                 {/* Visual support tags */}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2 text-[11px] text-[#22C55E] font-bold">
-                  <span>✓ Free Setup</span>
+                  <span>✓ Premium Setup</span>
                   <span>✓ Free Local Language Training</span>
                   <span>✓ Free Business Subdomain Website</span>
                   <span>✓ Free WhatsApp Automation</span>
@@ -886,11 +1043,11 @@ export default function App() {
               </div>
 
               <button
-                onClick={() => handleOpenPaymentCheckout('Onboarding Setup', 1, 'Billing: 30-Day Active Trial Deposit')}
+                onClick={() => handleOpenPaymentCheckout('Onboarding Setup', 99, 'Billing: 30-Day Active Trial Deposit')}
                 className="rounded-xl bg-[#22C55E] px-5 sm:px-6 py-3.5 text-xs font-extrabold text-[#022C22] shadow-lg transition hover:bg-emerald-400 cursor-pointer w-full sm:w-auto text-center sm:whitespace-nowrap whitespace-normal"
                 id="pricing-claim-banner-btn"
               >
-                Claim ₹1 Special Offer Now
+                Claim ₹99 Special Offer Now
               </button>
             </div>
           </div>
@@ -902,7 +1059,7 @@ export default function App() {
       <section className="py-16 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-slate-955 dark:text-slate-200">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-slate-800 dark:text-slate-200">
               Clear Doubts
             </span>
             <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -922,52 +1079,52 @@ export default function App() {
             {/* Left Contact Coordinates Info */}
             <div className="lg:col-span-5 space-y-6">
               <div className="space-y-2">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-slate-955 dark:text-slate-200">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-slate-800 dark:text-slate-200">
                   Grow With AppointO
                 </span>
                 <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
                   Let’s Grow Your Business Together
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-450 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   Have questions about custom WhatsApp message triggers, billing structures, or multi-location synchronization? Fill out the demo coordinates, and our onboarding division in Tier-2/3 centers will verify within 2 hours.
                 </p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 
                 {/* Card Call */}
-                <div className="flex gap-4 rounded-2xl border border-slate-150 bg-white p-4.5 dark:border-slate-900 dark:bg-slate-900/50">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-950 dark:bg-slate-900 dark:text-white">
+                <div className="flex gap-3 rounded-2xl bg-white p-4 dark:bg-slate-900/50 shadow-sm border border-slate-100 dark:border-slate-800 min-w-0">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-slate-905 dark:text-white">
                     <Phone className="h-5 w-5" />
                   </span>
-                  <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 dark:text-white block uppercase tracking-wider">Call Us Help</h4>
-                    <p className="text-xs font-sans font-extrabold text-slate-955 dark:text-white mt-0.5">+91 8104530286</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Supported in English, Hindi, and local languages</p>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[11px] font-extrabold text-slate-800 dark:text-slate-350 block uppercase tracking-wider">Call Us Help</h4>
+                    <p className="text-xs font-sans font-extrabold text-slate-900 dark:text-white mt-0.5 break-all select-all">+91 8104530286</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">Supported in English, Hindi, and local languages</p>
                   </div>
                 </div>
 
                 {/* Card Email */}
-                <div className="flex gap-4 rounded-2xl border border-slate-150 bg-white p-4.5 dark:border-slate-900 dark:bg-slate-900/50">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-950 dark:bg-slate-900 dark:text-white">
+                <div className="flex gap-3 rounded-2xl bg-white p-4 dark:bg-slate-900/50 shadow-sm border border-slate-100 dark:border-slate-800 min-w-0">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-slate-905 dark:text-white">
                     <Mail className="h-5 w-5" />
                   </span>
-                  <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 dark:text-white block uppercase tracking-wider">Email Customer Support</h4>
-                    <p className="text-xs font-sans font-extrabold text-slate-955 dark:text-white mt-0.5">success@appointo.online</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Replies generated instantly within 3 hours</p>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[11px] font-extrabold text-slate-800 dark:text-slate-350 block uppercase tracking-wider">Email Support</h4>
+                    <p className="text-xs font-sans font-extrabold text-slate-900 dark:text-white mt-0.5 break-all select-all">success@appointo.online</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">Replies generated instantly within 3 hours</p>
                   </div>
                 </div>
 
                 {/* Card Location */}
-                <div className="flex gap-4 rounded-2xl border border-slate-150 bg-white p-4.5 dark:border-slate-900 dark:bg-slate-900/50">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-950 dark:bg-slate-900 dark:text-white">
+                <div className="flex gap-3 rounded-2xl bg-white p-4 dark:bg-slate-900/50 shadow-sm border border-slate-100 dark:border-slate-800 col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-2 min-w-0">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-slate-905 dark:text-white">
                     <MapPin className="h-5 w-5" />
                   </span>
-                  <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 dark:text-white block uppercase tracking-wider">Office Address</h4>
-                    <p className="text-xs font-sans font-extrabold text-slate-955 dark:text-white mt-0.5">Innovationix IT Solutions LLP</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">N3-IRC Village, Nayapali, Bhubaneswar, Odisha-751015</p>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[11px] font-extrabold text-slate-800 dark:text-slate-350 block uppercase tracking-wider">Office Address</h4>
+                    <p className="text-xs font-sans font-extrabold text-slate-900 dark:text-white mt-0.5">Innovationix IT Solutions LLP</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">N3-IRC Village, Nayapali, Bhubaneswar, Odisha-751015</p>
                   </div>
                 </div>
 
@@ -975,13 +1132,13 @@ export default function App() {
 
               {/* Social Icons matching request */}
               <div className="space-y-2 pt-2">
-                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-widest">Follow AppointO Updates</span>
-                <div className="flex gap-2 text-slate-405 dark:text-slate-400">
+                <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-widest">Follow AppointO Updates</span>
+                <div className="flex flex-wrap gap-2 text-slate-500 dark:text-slate-400">
                   {['Facebook', 'Instagram', 'LinkedIn', 'YouTube', 'WhatsApp'].map((social) => (
                     <button
                       key={social}
                       onClick={() => alert(`Redirecting to AppointO official ${social} account (Simulation)`)}
-                      className="rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-bold text-slate-705 transition hover:border-slate-955 hover:text-slate-955 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white"
+                      className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white"
                     >
                       {social}
                     </button>
@@ -992,8 +1149,9 @@ export default function App() {
             </div>
 
             {/* Right Interactive Contact / Demo Coordinates Form */}
-            <div className="lg:col-span-7">
-              <div className="rounded-3xl border border-slate-205 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 sm:p-8 relative overflow-hidden" id="demo-form-box">
+            <div className="lg:col-span-7 w-full max-w-full overflow-hidden">
+              <div className="rounded-3xl bg-white p-4 sm:p-8 shadow-xl dark:bg-slate-900 relative overflow-hidden" id="demo-form-box">
+
                 {isContactSubmitted ? (
                   <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
@@ -1012,12 +1170,12 @@ export default function App() {
                     <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-4">
                       Thank You, {contactName}!
                     </h3>
-                    <p className="mt-2 text-xs text-slate-505 dark:text-slate-400 max-w-md leading-normal">
+                    <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 max-w-md leading-normal">
                       We registered your clinic/salon onboarding parameters for <strong className="text-slate-800 dark:text-white">{contactBusiness}</strong>. Our service specialists are checking slot availability in <strong className="text-slate-800 dark:text-white">{contactCity || 'your city'}</strong>.
                     </p>
 
                     {/* Simulation Pipeline animation stages */}
-                    <div className="mt-6 w-full max-w-sm rounded-xl bg-slate-50 border border-slate-100 p-4 text-left space-y-3 dark:bg-slate-950 dark:border-slate-900">
+                    <div className="mt-6 w-full max-w-sm rounded-xl bg-slate-50 p-4 text-left space-y-3 dark:bg-slate-950">
                       <span className="text-[9px] font-black uppercase text-slate-400 block tracking-widest">Setup Configuration Stages</span>
                       
                       <div className="flex items-center gap-2.5">
@@ -1036,7 +1194,7 @@ export default function App() {
                         <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${contactSuccessTimer >= 3 ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                           {contactSuccessTimer >= 3 ? '✓' : '3'}
                         </span>
-                        <span className={`text-xs ${contactSuccessTimer >= 3 ? 'text-slate-700 dark:text-slate-200 font-bold' : 'text-slate-400'}`}>WhatsApp sandbox triggers online</span>
+                        <span className={`text-xs ${contactSuccessTimer >= 3 ? 'text-slate-700 dark:text-slate-250 font-bold' : 'text-slate-400'}`}>WhatsApp sandbox triggers online</span>
                       </div>
                     </div>
 
@@ -1059,120 +1217,281 @@ export default function App() {
                     </button>
                   </motion.div>
                 ) : (
-                  <form onSubmit={handleContactSubmit} className="space-y-4">
+                  <form onSubmit={handleContactSubmit} className="space-y-4 w-full">
                     <div className="mb-4">
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white font-sans">
                         Request Free Onboarding Demo
                       </h3>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 mb-4">
                         Let us show you how AppointO can scale your customer bookings.
                       </p>
+
+                      {/* Subtle Form Completion Progress Bar */}
+                      <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-100 dark:bg-slate-950/40 dark:border-slate-800/60" id="form-progress-indicator">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="flex h-2 w-2 rounded-full bg-blue-500 relative">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                            </span>
+                            <span>Setup Profile Progress</span>
+                          </div>
+                          <span className="font-mono text-xs text-blue-600 dark:text-cyan-400">
+                            {getFormProgress()}% Complete
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden relative">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                            style={{ width: `${getFormProgress()}%` }}
+                            animate={{ width: `${getFormProgress()}%` }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
+                          />
+                        </div>
+                        {getFormProgress() === 100 ? (
+                          <p className="text-[10.5px] font-semibold text-emerald-600 mt-2 flex items-center gap-1 leading-normal">
+                            <span>🎉 All required fields successfully filled! You are ready to request your custom sandbox.</span>
+                          </p>
+                        ) : (
+                          <div className="text-[10px] text-slate-400 mt-2 flex items-center justify-between font-medium">
+                            <span>Please fill in Name, Business Name, WhatsApp, and City.</span>
+                            <span className="font-semibold text-slate-500 dark:text-slate-300 font-mono">
+                              {4 - Math.round(getFormProgress() / 25)} left
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <label className="block text-[13.5px] sm:text-sm font-extrabold text-slate-800 dark:text-slate-350 mb-1 leading-snug">
                           Full Name <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="text"
-                          required
-                          value={contactName}
-                          onChange={(e) => handleNameChange(e.target.value)}
-                          placeholder="e.g. Dr. Anand Deshmukh"
-                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
-                            contactErrors.name
-                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
-                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
-                          }`}
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            required
+                            value={contactName}
+                            onChange={(e) => handleNameChange(e.target.value)}
+                            placeholder="e.g. Dr. Anand Deshmukh"
+                            className={`w-full rounded-xl border px-4 py-4.5 pr-20 text-xs outline-none transition-colors ${
+                              contactErrors.name
+                                ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                                : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                            }`}
+                          />
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {contactName && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setContactName('');
+                                  setTouchedFields(prev => ({ ...prev, name: false }));
+                                }}
+                                className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition cursor-pointer px-1.5 py-0.5 rounded focus:outline-none"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            {touchedFields.name && (
+                              <div className="flex items-center justify-center pointer-events-none">
+                                {contactErrors.name ? (
+                                  <X className="w-4 h-4 text-red-500 shrink-0" />
+                                ) : (
+                                  <Check className="w-4 h-4 text-green-500 shrink-0" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         {contactErrors.name && (
-                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                          <p className="mt-1 text-[10px] font-semibold text-red-600 dark:text-rose-400 leading-tight">
                             ⚠️ {contactErrors.name}
                           </p>
                         )}
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <label className="block text-[13.5px] sm:text-sm font-extrabold text-slate-800 dark:text-slate-350 mb-1 leading-snug">
                           Business / Clinic Name <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="text"
-                          required
-                          value={contactBusiness}
-                          onChange={(e) => handleBusinessChange(e.target.value)}
-                          placeholder="e.g. Dental Care Center"
-                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
-                            contactErrors.business
-                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
-                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
-                          }`}
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            required
+                            value={contactBusiness}
+                            onChange={(e) => handleBusinessChange(e.target.value)}
+                            placeholder="e.g. Dental Care Center"
+                            className={`w-full rounded-xl border px-4 py-4.5 pr-20 text-xs outline-none transition-colors ${
+                              contactErrors.business
+                                ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                                : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                            }`}
+                          />
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {contactBusiness && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setContactBusiness('');
+                                  setTouchedFields(prev => ({ ...prev, business: false }));
+                                }}
+                                className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition cursor-pointer px-1.5 py-0.5 rounded focus:outline-none"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            {touchedFields.business && (
+                              <div className="flex items-center justify-center pointer-events-none">
+                                {contactErrors.business ? (
+                                  <X className="w-4 h-4 text-red-500 shrink-0" />
+                                ) : (
+                                  <Check className="w-4 h-4 text-green-500 shrink-0" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         {contactErrors.business && (
-                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                          <p className="mt-1 text-[10px] font-semibold text-red-600 dark:text-rose-400 leading-tight">
                             ⚠️ {contactErrors.business}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <label className="block text-[13.5px] sm:text-sm font-extrabold text-slate-800 dark:text-slate-350 mb-1 leading-snug">
                           WhatsApp Mobile Number <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="tel"
-                          required
-                          value={contactPhone}
-                          onChange={(e) => handlePhoneChange(e.target.value)}
-                          placeholder="e.g. 98765 43210 (with country code)"
-                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
-                            contactErrors.phone
-                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
-                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
-                          }`}
-                        />
+                        <div className="relative">
+                          {(() => {
+                            const stripped = contactPhone.replace(/\D/g, '');
+                            let flag = '🇮🇳';
+                            let label = 'IN';
+                            if (contactPhone.startsWith('+')) {
+                              if (stripped.startsWith('1')) { flag = '🇺🇸'; label = 'US'; }
+                              else if (stripped.startsWith('44')) { flag = '🇬🇧'; label = 'UK'; }
+                              else if (stripped.startsWith('971')) { flag = '🇦🇪'; label = 'AE'; }
+                              else if (stripped.startsWith('65')) { flag = '🇸🇬'; label = 'SG'; }
+                              else if (stripped.startsWith('61')) { flag = '🇦🇺'; label = 'AU'; }
+                              else if (stripped.startsWith('91')) { flag = '🇮🇳'; label = 'IN'; }
+                              else if (detectedCountry) { flag = detectedCountry.flag; label = detectedCountry.code; }
+                              else if (stripped.length > 0) { flag = '🌐'; label = 'INT'; }
+                            } else if (stripped.startsWith('91')) {
+                              flag = '🇮🇳'; label = 'IN';
+                            } else if (detectedCountry) {
+                              flag = detectedCountry.flag;
+                              label = detectedCountry.code;
+                            }
+                            return (
+                              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 dark:bg-slate-800/80 dark:border-slate-700/60 pl-1.5 pr-2 py-1 rounded-lg select-none pointer-events-none text-xs font-bold text-slate-500 dark:text-slate-400">
+                                <span className="text-sm leading-none">{flag}</span>
+                                <span className="text-[9px] tracking-wider font-extrabold leading-none text-slate-400 dark:text-slate-500">{label}</span>
+                              </div>
+                            );
+                          })()}
+                          <input
+                            type="tel"
+                            required
+                            value={contactPhone}
+                            onChange={(e) => handlePhoneChange(e.target.value)}
+                            placeholder="e.g. 98765 43210"
+                            className={`w-full rounded-xl border pl-15 py-4.5 pr-20 text-xs outline-none transition-colors ${
+                              contactErrors.phone
+                                ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                                : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                            }`}
+                          />
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {contactPhone && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setContactPhone('');
+                                  setTouchedFields(prev => ({ ...prev, phone: false }));
+                                }}
+                                className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition cursor-pointer px-1.5 py-0.5 rounded focus:outline-none"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            {touchedFields.phone && (
+                              <div className="flex items-center justify-center pointer-events-none">
+                                {contactErrors.phone ? (
+                                  <X className="w-4 h-4 text-red-500 shrink-0" />
+                                ) : (
+                                  <Check className="w-4 h-4 text-green-500 shrink-0" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         {contactErrors.phone && (
-                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                          <p className="mt-1 text-[10px] font-semibold text-red-600 dark:text-rose-400 leading-tight">
                             ⚠️ {contactErrors.phone}
                           </p>
                         )}
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <label className="block text-[13.5px] sm:text-sm font-extrabold text-slate-800 dark:text-slate-350 mb-1 leading-snug">
                           Email Address
                         </label>
-                        <input
-                          type="email"
-                          value={contactEmail}
-                          onChange={(e) => handleEmailChange(e.target.value)}
-                          placeholder="anand@gmail.com"
-                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
-                            contactErrors.email
-                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
-                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
-                          }`}
-                        />
+                        <div className="relative">
+                          <input
+                            type="email"
+                            value={contactEmail}
+                            onChange={(e) => handleEmailChange(e.target.value)}
+                            placeholder="anand@gmail.com"
+                            className={`w-full rounded-xl border px-4 py-4.5 pr-20 text-xs outline-none transition-colors ${
+                              contactErrors.email
+                                ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                                : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                            }`}
+                          />
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {contactEmail && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setContactEmail('');
+                                  setTouchedFields(prev => ({ ...prev, email: false }));
+                                }}
+                                className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition cursor-pointer px-1.5 py-0.5 rounded focus:outline-none"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            {touchedFields.email && (
+                              <div className="flex items-center justify-center pointer-events-none">
+                                {contactErrors.email ? (
+                                  <X className="w-4 h-4 text-red-500 shrink-0" />
+                                ) : (
+                                  <Check className="w-4 h-4 text-green-500 shrink-0" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         {contactErrors.email && (
-                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                          <p className="mt-1 text-[10px] font-semibold text-red-600 dark:text-rose-400 leading-tight">
                             ⚠️ {contactErrors.email}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <label className="block text-[13.5px] sm:text-sm font-extrabold text-slate-800 dark:text-slate-350 mb-1 leading-snug">
                           Business Type <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={contactType}
                           onChange={(e) => setContactType(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-4.5 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                         >
                           <option value="clinics">🏥 Clinic / Medical</option>
                           <option value="dental">🦷 Dental Practice</option>
@@ -1184,23 +1503,48 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <label className="block text-[13.5px] sm:text-sm font-extrabold text-slate-800 dark:text-slate-350 mb-1 leading-snug">
                           City <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="text"
-                          required
-                          value={contactCity}
-                          onChange={(e) => handleCityChange(e.target.value)}
-                          placeholder="e.g. Nagpur / Patna"
-                          className={`mt-1 w-full rounded-xl border px-3.5 py-3 text-xs outline-none transition-colors ${
-                            contactErrors.city
-                              ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
-                              : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
-                          }`}
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            required
+                            value={contactCity}
+                            onChange={(e) => handleCityChange(e.target.value)}
+                            placeholder="e.g. Nagpur / Patna"
+                            className={`w-full rounded-xl border px-4 py-4.5 pr-20 text-xs outline-none transition-colors ${
+                              contactErrors.city
+                                ? 'border-red-500 bg-rose-50/50 text-red-900 focus:border-red-650 dark:bg-rose-950/20 dark:text-rose-250 dark:border-rose-900'
+                                : 'border-slate-200 bg-white focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white'
+                            }`}
+                          />
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {contactCity && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setContactCity('');
+                                  setTouchedFields(prev => ({ ...prev, city: false }));
+                                }}
+                                className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition cursor-pointer px-1.5 py-0.5 rounded focus:outline-none"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            {touchedFields.city && (
+                              <div className="flex items-center justify-center pointer-events-none">
+                                {contactErrors.city ? (
+                                  <X className="w-4 h-4 text-red-500 shrink-0" />
+                                ) : (
+                                  <Check className="w-4 h-4 text-green-500 shrink-0" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         {contactErrors.city && (
-                          <p className="mt-1 text-[10px] font-semibold text-red-550 dark:text-rose-400 leading-tight">
+                          <p className="mt-1 text-[10px] font-semibold text-red-600 dark:text-rose-400 leading-tight">
                             ⚠️ {contactErrors.city}
                           </p>
                         )}
@@ -1208,27 +1552,40 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
+                      <label className="block text-[13.5px] sm:text-sm font-extrabold text-slate-800 dark:text-slate-350 mb-1 leading-snug">
                         Message / Custom Requirements
                       </label>
-                      <textarea
-                        rows={3}
-                        value={contactMessage}
-                        onChange={(e) => setContactMessage(e.target.value)}
-                        placeholder="Tell us about daily booking volume, staff count, language choices etc."
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-                      />
+                      <div className="relative">
+                        <textarea
+                          rows={3}
+                          value={contactMessage}
+                          onChange={(e) => setContactMessage(e.target.value)}
+                          placeholder="Tell us about daily booking volume, staff count, language choices etc."
+                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-4 pr-16 text-xs outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                        />
+                        {contactMessage && (
+                          <div className="absolute right-4 top-3.5">
+                            <button
+                              type="button"
+                              onClick={() => setContactMessage('')}
+                              className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition cursor-pointer px-1.5 py-0.5 rounded focus:outline-none"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 py-3.5 text-xs font-extrabold text-white shadow-lg shadow-blue-500/10 transition hover:from-blue-700 hover:to-cyan-650"
+                      className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 py-4.5 text-xs font-extrabold text-white shadow-lg shadow-blue-500/10 transition hover:from-blue-700 hover:to-cyan-650"
                       id="contact-form-submit"
                     >
                       Request Free Demo Setup
                     </button>
 
-                    <p className="text-center text-[10px] text-slate-400">
+                    <p className="text-center text-[10px] text-slate-500 font-semibold">
                       Our onboarding division will contact you within 24 hours.
                     </p>
                   </form>

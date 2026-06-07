@@ -265,15 +265,15 @@ export default function RazorpayCheckoutModal({
     addLog(`Plan tier selection confirmed: AppointO ${name} Package Selected. Stage upgraded.`, 'info');
   };
 
-  // Step 4: Pay ₹1 and create subscription starting 30 days from now
+  // Step 4: Pay ₹0 and create subscription starting 30 days from now
   const handleInitiateTrialOnboarding = async () => {
     setErrorMessage('');
     setIsProcessing(true);
-    addLog(`Initiating transaction workflow: Requesting Razorpay transaction order creation for ${activePlanName} plan...`, 'info');
+    addLog(`Initiating transaction workflow: Requesting merchant billing transaction order creation for ${activePlanName} plan...`, 'info');
     addLog('Dispatching POST /api/create-subscription-order...', 'info');
 
     try {
-      // 1. Order Creator Payload for Verification ₹1 Charge (100 Paise)
+      // 1. Order Creator Payload for Verification ₹0 Charge
       const resOrder = await fetch('/api/create-subscription-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -288,12 +288,9 @@ export default function RazorpayCheckoutModal({
       }
 
       const { order_id, amount, currency, is_simulated, key_id } = orderData;
-      addLog(`Razorpay order created successfully. Dynamic Order ID: "${order_id}", Amount: ₹${amount / 100} ${currency}.`, 'success');
+      const displayAmount = amount === 0 ? 0 : amount / 100;
+      addLog(`Razorpay order created successfully. Dynamic Order ID: "${order_id}", Amount: ₹${displayAmount} ${currency}.`, 'success');
 
-      // 2. Local Environment parameters for Razorpay (prioritizing backend-supplied dynamic key_id)
-      const rzpKeyId = key_id || (import.meta as any).env.VITE_RAZORPAY_KEY_ID || 'rzp_test_Svzvbb48FopJP7';
-      addLog(`Initializing Razorpay secure checkout overlay. SDK Key ID utilized: "${rzpKeyId.substring(0, 10)}...". Prefill config set: ${ownerName} (${email})`, 'info');
-      
       // Handle the validation callback handler in Express
       const handleBackendActivation = async (payId?: string, signature?: string, simulatedVal: boolean = false) => {
         addLog('Initiating SHA256 cryptographic signature verification alignment check...', 'info');
@@ -337,6 +334,17 @@ export default function RazorpayCheckoutModal({
         }
       };
 
+      // If the trial is ₹0, bypass Razorpay SDK checkout overlay entirely for direct success transition
+      if (amount === 0 || order_id.startsWith('order_free_')) {
+        addLog('Free onboarding promotion detected. Processing instant secure trial activation...', 'info');
+        await handleBackendActivation(`pay_free_${Date.now()}`, `sig_free_${Date.now()}`, true);
+        return;
+      }
+
+      // 2. Local Environment parameters for Razorpay (prioritizing backend-supplied dynamic key_id)
+      const rzpKeyId = key_id || (import.meta as any).env.VITE_RAZORPAY_KEY_ID || 'rzp_test_Svzvbb48FopJP7';
+      addLog(`Initializing Razorpay secure checkout overlay. SDK Key ID utilized: "${rzpKeyId.substring(0, 10)}...". Prefill config set: ${ownerName} (${email})`, 'info');
+
       // Verify Razorpay secure checkout SDK is fully loaded
       if (!(window as any).Razorpay) {
         throw new Error('Razorpay Secure Checkout SDK is not fully loaded. Please verify your internet connection, disable any tracker blockers, and reload the page.');
@@ -348,7 +356,7 @@ export default function RazorpayCheckoutModal({
         amount: amount,
         currency: currency,
         name: 'AppointO Systems',
-        description: `₹1 Trial Verification Onboarding for ${activePlanName}`,
+        description: `₹99 Trial Verification Onboarding for ${activePlanName}`,
         image: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=128&q=80',
         order_id: order_id,
         prefill: {
@@ -364,23 +372,51 @@ export default function RazorpayCheckoutModal({
           await handleBackendActivation(response.razorpay_payment_id, response.razorpay_signature, false);
         },
         modal: {
-          ondismiss: () => {
+          ondismiss: async () => {
             addLog('Razorpay secure checkout popup closed or dismissed by user. Transaction flow aborted.', 'warn');
             setIsProcessing(false);
+            try {
+              await fetch('/api/report-payment-failure', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: 'usr_logged_in',
+                  planName: activePlanName,
+                  error: 'Razorpay checkout popup closed/dismissed by user.'
+                })
+              });
+            } catch (reportErr) {
+              console.error('Failed to report payment cancellation to backend:', reportErr);
+            }
           }
         }
       };
 
       const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', (errPayload: any) => {
+      rzp.on('payment.failed', async (errPayload: any) => {
         addLog(`Razorpay Gateway Error: Transaction failed! description: "${errPayload.error.description}". Code: "${errPayload.error.code}". Reason: "${errPayload.error.reason}".`, 'error');
         const errMsg = errPayload.error.description || 'Onboarding transaction failed.';
         setErrorMessage(errMsg);
         triggerPaymentFailureToast(errMsg, false);
         setIsProcessing(false);
+ 
+        // Report to server for CRM "New Lead" sync + failure notification email dispatch
+        try {
+          await fetch('/api/report-payment-failure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: 'usr_logged_in',
+              planName: activePlanName,
+              error: errMsg
+            })
+          });
+        } catch (reportErr) {
+          console.error('Failed to report payment failure to backend:', reportErr);
+        }
       });
 
-      addLog('Launching Razorpay Checkout window... Please complete the ₹1 verification secure charge.', 'info');
+      addLog('Launching Razorpay Checkout window... Please complete the ₹99 verification secure setup.', 'info');
       rzp.open();
 
     } catch (err: any) {
@@ -390,6 +426,21 @@ export default function RazorpayCheckoutModal({
       const isNet = errMsg.toLowerCase().includes('network') || errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('failed to fetch');
       triggerPaymentFailureToast(errMsg, isNet);
       setIsProcessing(false);
+
+      // Report to server for CRM "New Lead" sync + failure notification email dispatch
+      try {
+        await fetch('/api/report-payment-failure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: 'usr_logged_in',
+            planName: activePlanName,
+            error: errMsg
+          })
+        });
+      } catch (reportErr) {
+        console.error('Failed to report payment failure to backend:', reportErr);
+      }
     }
   };
 
@@ -677,7 +728,7 @@ export default function RazorpayCheckoutModal({
                   <div className="space-y-1">
                     <h4 className="text-sm font-black text-slate-900 dark:text-white">Start Your 30-Day Trial Today</h4>
                     <p className="text-[10.5px] text-slate-500 leading-relaxed font-semibold dark:text-slate-300">
-                      Pay only <strong className="text-blue-600 dark:text-blue-400">₹1 now</strong>. Your selected plan will start automatically after 30 days.
+                      Pay only <strong className="text-blue-600 dark:text-blue-400">₹99 now</strong>. Your selected plan will start automatically after 30 days.
                     </p>
                   </div>
                 </div>
@@ -696,7 +747,7 @@ export default function RazorpayCheckoutModal({
                     </div>
                     <div className="flex justify-between text-blue-600 dark:text-blue-400">
                       <span>Amount Due Today</span>
-                      <strong className="text-lg font-black text-blue-600 dark:text-cyan-400">₹1.00</strong>
+                      <strong className="text-lg font-black text-blue-600 dark:text-cyan-400 font-sans">₹99.00</strong>
                     </div>
                   </div>
                 </div>
@@ -704,7 +755,7 @@ export default function RazorpayCheckoutModal({
                 <div className="rounded-xl bg-orange-500/5 border border-orange-500/10 p-3 text-[9.5px] text-slate-500 leading-normal flex items-start gap-1.5 dark:text-slate-450">
                   <ShieldCheck className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
                   <div>
-                    This secure ₹1 charge validates genuine local entities, activates your trial instantly, and mitigates robot spams. Under Razorpay sandbox test rules, no actual credit lines are collected.
+                    This secure ₹99 trial registration validates genuine local entities, activates your trial instantly, and mitigates robot spams. Under Razorpay sandbox test rules, no actual credit lines are collected.
                   </div>
                 </div>
 
@@ -721,7 +772,7 @@ export default function RazorpayCheckoutModal({
                     </>
                   ) : (
                     <>
-                      <span>Submit Onboarding Fee (₹1 Charge)</span>
+                      <span>Submit Onboarding Setup (₹99 Charge)</span>
                       <ArrowRight className="h-4 w-4" />
                     </>
                   )}
@@ -745,7 +796,7 @@ export default function RazorpayCheckoutModal({
                 <div>
                   <h4 className="text-base font-black text-slate-900 dark:text-white">Trial Successfully Active!</h4>
                   <p className="text-[10px] text-slate-500 mt-0.5 font-medium leading-relaxed">
-                    We verified your ₹1 payment securely. Your 30-Day AppointO trial workspace is now active.
+                    We verified your ₹99 setup request securely. Your 30-Day AppointO trial workspace is now active.
                   </p>
                 </div>
 
@@ -780,50 +831,7 @@ export default function RazorpayCheckoutModal({
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Telemetry Diagnostic Console */}
-          <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-950 text-slate-200">
-            {/* Header / Toggle button */}
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full flex items-center justify-between px-6 py-3 hover:bg-slate-900 transition text-[10.5px] font-mono select-none border-b border-slate-900"
-            >
-              <div className="flex items-center gap-2">
-                <Terminal className="h-3.5 w-3.5 text-blue-400 animate-pulse" />
-                <span className="font-extrabold uppercase tracking-wider text-slate-300">Live Transaction Diagnostics</span>
-                <span className="bg-blue-950 text-blue-400 px-1.5 py-0.5 rounded text-[8px] font-black uppercase">Live Logs</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[9px] text-slate-450 font-bold">
-                  {logs.length} event{logs.length !== 1 ? 's' : ''}
-                </span>
-                <span className="text-slate-400 font-mono text-[9px]">{isExpanded ? '▼' : '▲'}</span>
-              </div>
-            </button>
-            
-            {/* Body */}
-            {isExpanded && (
-              <div className="px-6 pb-4 pt-1.5 max-h-40 overflow-y-auto font-mono text-[9px] space-y-1.5 bg-slate-950/95 scrollbar-thin divide-y divide-slate-900">
-                {logs.map((log, idx) => (
-                  <div key={idx} className="pt-1.5 leading-relaxed text-left flex gap-1.5 items-start">
-                    <span className="text-slate-500 font-bold shrink-0">[{log.timestamp}]</span>
-                    <span className={`font-black uppercase shrink-0 text-[7.5px] tracking-wider px-1 rounded ${
-                      log.level === 'info' ? 'bg-blue-950 text-blue-400' :
-                      log.level === 'success' ? 'bg-emerald-950 text-emerald-450' :
-                      log.level === 'warn' ? 'bg-amber-950 text-amber-450' :
-                      'bg-rose-950 text-rose-400'
-                    }`}>
-                      {log.level}
-                    </span>
-                    <span className="text-slate-300 select-all">{log.message}</span>
-                  </div>
-                ))}
-                <div ref={terminalEndRef} />
-              </div>
-            )}
-          </div>
+          </div>          
         </motion.div>
       </div>
 

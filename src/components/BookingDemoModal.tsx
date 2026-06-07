@@ -71,7 +71,7 @@ export default function BookingDemoModal({
       
       // Inject the newly scheduled booking into the global dashboard state
       const simulatedBooking: Appointment = {
-        id: `custom-${Date.now()}`,
+        id: `custom-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
         customerName: name,
         service: selectedService,
         time: selectedTime,
@@ -229,7 +229,7 @@ export default function BookingDemoModal({
                 <span className={`${step >= 1 ? 'text-slate-900 dark:text-slate-200 font-bold' : 'text-slate-300'}`}>Selection</span>
                 <span className="text-slate-300">/</span>
                 <span className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full text-[9px] ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>2</span>
-                <span className={`${step >= 2 ? 'text-slate-900 dark:text-slate-200 font-bold' : 'text-slate-450'}`}>Customer Details</span>
+                <span className={`${step >= 2 ? 'text-slate-900 dark:text-slate-200 font-bold' : 'text-slate-400'}`}>Customer Details</span>
               </div>
             </div>
 

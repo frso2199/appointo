@@ -97,11 +97,11 @@ export default function ExitIntentModal({ onClaimOffer }: ExitIntentModalProps) 
               </div>
 
               <h2 className="mt-2 text-2xl font-extrabold leading-tight text-slate-900 dark:text-white font-sans sm:text-3xl">
-                Claim 30-Day AppointO Trial For <span className="underline decoration-orange-500 text-orange-600">₹1 Only</span>!
+                Claim 30-Day AppointO Trial For <span className="underline decoration-orange-500 text-orange-600">₹99 Only</span>!
               </h2>
 
               <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                Reduce patient or customer no-shows, collect online pre-payments instantly, and completely automate scheduling on busy WhatsApp channels. Get fully customized setup and hands-on staff training absolutely free of cost.
+                Reduce patient or customer no-shows, collect online pre-payments instantly, and completely automate scheduling on busy WhatsApp channels. Get fully customized setup and hands-on staff training.
               </p>
 
               <form onSubmit={handleSubmit} className="mt-5 space-y-3">
@@ -168,7 +168,7 @@ export default function ExitIntentModal({ onClaimOffer }: ExitIntentModalProps) 
                   className="mt-4 w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 py-3 text-xs font-bold text-white shadow-xl shadow-orange-500/10 transition hover:from-orange-600 hover:to-amber-700"
                   id="claim-exclusive-btn"
                 >
-                  🎁 Claim 30-Day AppointO Trial @ ₹1 Now!
+                  🎁 Claim 30-Day AppointO Trial @ ₹99 Now!
                 </button>
               </form>
 
@@ -183,10 +183,10 @@ export default function ExitIntentModal({ onClaimOffer }: ExitIntentModalProps) 
               <div className="mb-4 rounded-full bg-green-500 p-4 text-white animate-bounce shadow-md">
                 <Check className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white font-sans">₹1 Trial Offer Claimed!</h3>
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white font-sans">₹99 Trial Offer Claimed!</h3>
               <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-normal">
                 Congratulations <strong className="text-slate-800 dark:text-white">{name}</strong>, we registered your coupon code.
-                An AppointO Success Desk Expert will text you on WhatsApp <strong className="text-slate-800 dark:text-white">{phone}</strong> within 2 hours to confirm your free set up and training schedules.
+                An AppointO Success Desk Expert will text you on WhatsApp <strong className="text-slate-800 dark:text-white">{phone}</strong> within 2 hours to confirm your trial onboarding and training schedules.
               </p>
               <div className="mt-6 rounded-lg bg-emerald-50 p-2 text-[10px] text-emerald-800 font-bold dark:bg-slate-950 dark:text-emerald-400">
                 🔍 Coupon Code APPOINTO7752 is active in your browser.

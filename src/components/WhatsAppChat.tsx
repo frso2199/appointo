@@ -37,7 +37,7 @@ export default function WhatsAppChat({ onTriggerDemo }: WhatsAppChatProps) {
     if (!text.trim()) return;
 
     const userMsg = {
-      id: `wuser-${Date.now()}`,
+      id: `wuser-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
       sender: 'user' as const,
       text: text,
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -58,8 +58,8 @@ export default function WhatsAppChat({ onTriggerDemo }: WhatsAppChatProps) {
           onTriggerDemo();
           setIsOpen(false);
         }, 1500);
-      } else if (query.includes('price') || query.includes('cost') || query.includes('plan')) {
-        botResponse = "💰 **AppointO Plans:** Our starter tier cost is only ₹499/month, while our Professional featured plan is ₹999/month. You can start with our **30-Day Trial for only ₹1**! No credit cards required.";
+      } else if (query.includes('price') || query.includes('cost') || query.includes('plan') || query.includes('trial')) {
+        botResponse = "💰 **AppointO Plans:** Our starter tier cost is only ₹499/month, while our Professional featured plan is ₹999/month. You can start with our **30-Day Trial for only ₹99**! No hidden setup fees, cancel anytime.";
       } else if (query.includes('hindi') || query.includes('language') || query.includes('bhasha')) {
         botResponse = "🗣️ **Multi-Language Automation:** Yes, AppointO AI chatbot seamlessly converses in Hindi, English, Tamil, Telugu, Marathi, Bengali, and Gujarati. This ensures high accessibility for tier 2 & tier 3 business customers!";
       } else {
@@ -67,7 +67,7 @@ export default function WhatsAppChat({ onTriggerDemo }: WhatsAppChatProps) {
       }
 
       setMessages(prev => [...prev, {
-        id: `wbot-${Date.now()}`,
+        id: `wbot-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
         sender: 'bot' as const,
         text: botResponse,
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -175,7 +175,7 @@ export default function WhatsAppChat({ onTriggerDemo }: WhatsAppChatProps) {
 
             {/* Quick replies Chips triggers */}
             <div className="px-3 py-2 border-t border-slate-200/40 bg-white/70 backdrop-blur-sm dark:bg-slate-900/60">
-              <span className="text-[10px] font-bold text-slate-405 block mb-1">Quick Select Reply:</span>
+              <span className="text-[10px] font-bold text-slate-500 block mb-1">Quick Select Reply:</span>
               <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                 <button
                   onClick={() => handleSendMessage("📅 Book a trial slot")}
@@ -184,10 +184,10 @@ export default function WhatsAppChat({ onTriggerDemo }: WhatsAppChatProps) {
                   ⚡ Start Booking Demo
                 </button>
                 <button
-                  onClick={() => handleSendMessage("💡 Explain ₹1 trial details")}
+                  onClick={() => handleSendMessage("💡 Explain ₹99 trial details")}
                   className="whitespace-nowrap rounded-full border border-slate-250 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-700 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300"
                 >
-                  ₹1 Trial Details
+                  ₹99 Trial Details
                 </button>
                 <button
                   onClick={() => handleSendMessage("🗣️ Hindi language test")}

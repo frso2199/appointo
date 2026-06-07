@@ -197,13 +197,13 @@ const getInitialDatabase = (): DatabaseSchema => {
   ];
 
   const payments: LocalPayment[] = [
-    // Onboarding fee ₹1 payments
+    // Onboarding fee ₹99 payments
     {
       id: 'pay_apex_trial',
       user_id: 'usr_1',
       subscription_id: 'sub_live_apex_4455',
       razorpay_payment_id: 'pay_rp_apex_t1',
-      amount: 1,
+      amount: 99,
       currency: 'INR',
       payment_type: 'TRIAL',
       status: 'captured',
@@ -335,7 +335,7 @@ const getInitialDatabase = (): DatabaseSchema => {
         {
           id: 'fu_4',
           date: dateDaysAgo(15),
-          notes: 'Completed ₹1 payment verifying verification transaction node.',
+          notes: 'Completed ₹99 payment verifying verification transaction node.',
           agent: 'System'
         }
       ],

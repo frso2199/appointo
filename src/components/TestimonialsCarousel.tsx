@@ -40,7 +40,7 @@ export default function TestimonialsCarousel() {
               {/* Star Rating Icons */}
               <div className="flex gap-1 text-amber-500">
                 {[...Array(active.rating)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-amber-500" />
+                  <Star key={`testimonial-star-${active.id}-${i}`} className="h-5 w-5 fill-amber-500" />
                 ))}
               </div>
 

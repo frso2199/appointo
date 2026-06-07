@@ -105,8 +105,8 @@ export const TESTIMONIALS: Testimonial[] = [
 export const FAQS: FAQ[] = [
   {
     id: 'faq1',
-    question: 'How does the ₹1 30-day trial work?',
-    answer: 'You can sign up with AppointO in just 2 minutes by paying ₹1. This gives you full, unrestricted access to the entire platform—including WhatsApp automation, online payments, staff scheduling, and dashboards—for 30 days! After 30 days, choose any of our affordable plans starting at ₹499/month, or cancel anytime.'
+    question: 'How does the ₹99 30-day trial work?',
+    answer: 'You can sign up with AppointO in just 2 minutes for a one-time onboarding payment of ₹99. This gives you full, unrestricted access to the entire platform—including WhatsApp automation, online payments, staff scheduling, and dashboards—for 30 days! After 30 days, choose any of our affordable plans starting at ₹499/month, or cancel anytime.'
   },
   {
     id: 'faq2',

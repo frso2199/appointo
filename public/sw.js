@@ -41,6 +41,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
+  // Bypass ServiceWorker entirely on development/localhost environments to prevent stale caching cycles
+  if (self.location.hostname === 'localhost' || 
+      self.location.hostname.includes('127.0.0.1') || 
+      self.location.hostname.includes('-dev-') || 
+      self.location.hostname.includes('ais-dev')) {
+    return;
+  }
+
   // 1. Bypass ServiceWorker for dynamic server-side Razorpay or subscription API routes
   if (requestUrl.pathname.startsWith('/api/')) {
     event.respondWith(

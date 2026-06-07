@@ -137,7 +137,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: Adm
           </button>
         </form>
 
-        <div className="mt-5 text-center text-[10px] text-slate-450 dark:text-slate-500 leading-relaxed font-sans">
+        <div className="mt-5 text-center text-[10px] text-slate-500 dark:text-slate-500 leading-relaxed font-sans">
           This secure login is reserved for system administrators. For trial activations, please use the starter coupon.
         </div>
 

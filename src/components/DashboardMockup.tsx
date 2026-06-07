@@ -113,7 +113,7 @@ export default function DashboardMockup({
     if (!messageText.trim()) return;
 
     const userMsg: Message = {
-      id: `chat-${Date.now()}`,
+      id: `chat-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
       sender: 'user',
       text: messageText,
       timestamp: 'Just now'
@@ -138,7 +138,7 @@ export default function DashboardMockup({
       }
 
       setChatMessages(prev => [...prev, {
-        id: `chat-${Date.now() + 1}`,
+        id: `chat-${Date.now() + 1}-${Math.floor(Math.random() * 100000)}`,
         sender: 'ai',
         text: aiResponseText,
         timestamp: 'Just now'
@@ -338,7 +338,7 @@ export default function DashboardMockup({
           className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs font-bold transition whitespace-nowrap shrink-0 ${
             activeTab === 'today'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-705'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
           id="tab-today-bookings"
         >
@@ -351,7 +351,7 @@ export default function DashboardMockup({
           className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs font-bold transition relative whitespace-nowrap shrink-0 ${
             activeTab === 'ai-assistant'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-705'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
           id="tab-ai-assistant"
         >
@@ -364,7 +364,7 @@ export default function DashboardMockup({
           className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs font-bold transition whitespace-nowrap shrink-0 ${
             activeTab === 'analytics'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-705'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
           id="tab-analytics"
         >
@@ -377,7 +377,7 @@ export default function DashboardMockup({
           className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs font-bold transition whitespace-nowrap shrink-0 ${
             activeTab === 'billing'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-755'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
           id="tab-billing-dashboard"
         >
@@ -498,7 +498,7 @@ export default function DashboardMockup({
               ))}
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-505 border border-slate-100 dark:bg-slate-850 dark:border-slate-700">
+                  <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-500 border border-slate-100 dark:bg-slate-850 dark:border-slate-700">
                     <span className="animate-pulse">Bot processing...</span>
                   </div>
                 </div>
@@ -513,7 +513,7 @@ export default function DashboardMockup({
                     key={idx}
                     type="button"
                     onClick={() => handleSendChat(chip.text)}
-                    className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-bold text-blue-600 transition hover:bg-blue-105 dark:bg-blue-950/40 dark:text-blue-400 cursor-pointer"
+                    className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-bold text-blue-600 transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 cursor-pointer"
                   >
                     💡 {chip.label}
                   </button>
@@ -611,7 +611,7 @@ export default function DashboardMockup({
               <div 
                 className={`p-3 rounded-xl border text-xs font-semibold leading-tight flex items-start gap-1.5 ${
                   billingFeedback.type === 'success' 
-                    ? 'bg-emerald-50 border-emerald-250 text-emerald-800 dark:bg-emerald-950/25 dark:border-emerald-900/30 dark:text-emerald-400' 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/25 dark:border-emerald-900/30 dark:text-emerald-400' 
                     : 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/25 dark:border-rose-900/30 dark:text-rose-450'
                 }`}
               >
@@ -625,7 +625,7 @@ export default function DashboardMockup({
                 <CreditCard className="h-10 w-10 text-slate-300 mx-auto" />
                 <div className="space-y-1">
                   <h5 className="text-xs font-extrabold text-slate-850 dark:text-white">SaaS Evaluation Sandbox Unit</h5>
-                  <p className="text-[10px] text-slate-450 max-w-sm mx-auto font-medium">
+                  <p className="text-[10px] text-slate-400 max-w-sm mx-auto font-medium">
                     No active premium workspace found. Buy monthly scheduling license to leverage AI WhatsApp engines, calendar integrations and custom SMS features!
                   </p>
                 </div>
@@ -642,7 +642,7 @@ export default function DashboardMockup({
                 
                 {/* 1. Subscription Profile Summary card */}
                 <div className="rounded-xl border border-slate-150 p-3 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/40 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-855">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800">
                     <div>
                       <span className="text-[9px] font-black text-blue-600 dark:text-cyan-400 uppercase tracking-widest block">Active Workspace</span>
                       <h4 className="text-xs font-black text-slate-850 dark:text-white uppercase tracking-wide">
@@ -719,7 +719,7 @@ export default function DashboardMockup({
                               className={`rounded font-bold px-2.5 py-1 text-[9px] uppercase tracking-wide cursor-pointer transition shrink-0 ${
                                 isUpgrade 
                                   ? 'bg-[#2563EB] text-white hover:bg-blue-600' 
-                                  : 'bg-slate-100 text-slate-705 dark:bg-slate-800 dark:text-slate-100 hover:opacity-80'
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100 hover:opacity-80'
                               }`}
                             >
                               {isUpgrade ? `Upgrade Now (Prorated)` : `Downgrade (Next Cycle)`}
@@ -903,13 +903,13 @@ export default function DashboardMockup({
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 1 }}
-          className="rounded-xl border border-emerald-505/30 bg-emerald-50 p-3 shadow-lg dark:bg-slate-900 max-w-[190px]"
+          className="rounded-xl border border-emerald-500/30 bg-emerald-50 p-3 shadow-lg dark:bg-slate-900 max-w-[190px]"
         >
           <div className="flex gap-2">
             <span className="mt-0.5 flex h-4 w-4 bg-green-500 text-white rounded-full items-center justify-center text-[10px]">&#10003;</span>
             <div>
               <p className="text-[10px] font-black text-slate-800 dark:text-white leading-tight">AppointO Notify</p>
-              <p className="mt-0.5 text-[9px] text-slate-501 line-clamp-2 leading-snug">SaaS engine synced. Scheduling triggers linked successfully.</p>
+              <p className="mt-0.5 text-[9px] text-slate-500 line-clamp-2 leading-snug">SaaS engine synced. Scheduling triggers linked successfully.</p>
             </div>
           </div>
         </motion.div>

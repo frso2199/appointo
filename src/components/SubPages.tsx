@@ -79,8 +79,8 @@ export default function SubPages({ initialPage, onNavigate, darkMode }: SubPages
     {
       id: 4,
       category: 'Billing & Setup',
-      question: 'What is included in the ₹1 Onboarding Trial?',
-      answer: 'Our ₹1 first-month package includes: official Meta WhatsApp API setup help, 1-on-1 staff video training, custom CSS styling for your booking links, and integration with your CRM or Google Calendars. No hidden setup fees, cancel anytime.'
+      question: 'What is included in the ₹99 Onboarding Trial?',
+      answer: 'Our ₹99 first-month package includes: official Meta WhatsApp API setup help, 1-on-1 staff video training, custom CSS styling for your booking links, and integration with your CRM or Google Calendars. No hidden setup fees, cancel anytime.'
     },
     {
       id: 5,
@@ -138,7 +138,7 @@ export default function SubPages({ initialPage, onNavigate, darkMode }: SubPages
             </div>
 
             {/* Quick mini switcher */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth bg-slate-800/60 p-1.5 rounded-xl border border-slate-705/50 max-w-full shrink-0">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth bg-slate-800/60 p-1.5 rounded-xl border border-slate-700/50 max-w-full shrink-0">
               <button 
                 onClick={() => setActiveTab('blog')}
                 className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition ${activeTab === 'blog' ? 'bg-[#2563EB] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
@@ -320,7 +320,7 @@ export default function SubPages({ initialPage, onNavigate, darkMode }: SubPages
                   <button
                     key={cat}
                     onClick={() => setSelectedFaqCategory(cat)}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${selectedFaqCategory === cat ? 'bg-slate-900 border border-slate-950 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-50 hover:bg-slate-100 border border-slate-200/50 dark:bg-slate-950 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 dark:border-slate-800'}`}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${selectedFaqCategory === cat ? 'bg-slate-900 border border-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-50 hover:bg-slate-100 border border-slate-200/50 dark:bg-slate-950 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 dark:border-slate-800'}`}
                   >
                     {cat}
                   </button>
@@ -546,7 +546,7 @@ export default function SubPages({ initialPage, onNavigate, darkMode }: SubPages
               <section className="space-y-2">
                 <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase">3. Trial Use and Registration Limits</h4>
                 <p>
-                  The ₹1 Onboarding Trial is configured exclusively for single-clinic, single-salon, or individual professional entities. Scraping or registering multiple slots with fraudulent WhatsApp numbers to bypass standard verification limits will trigger auto-termination of the sandbox environment.
+                  The ₹99 Onboarding Trial is configured exclusively for single-clinic, single-salon, or individual professional entities. Scraping or registering multiple slots with fraudulent WhatsApp numbers to bypass standard verification limits will trigger auto-termination of the sandbox environment.
                 </p>
               </section>
 
@@ -623,7 +623,7 @@ export default function SubPages({ initialPage, onNavigate, darkMode }: SubPages
               <section className="space-y-2">
                 <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase">2. Onboarding Fee Cancellation Policy</h4>
                 <p>
-                  The introductory <strong>₹1 AppointO Onboarding Trial</strong> offer is fully non-refundable due to the custom automated WhatsApp API and Meta sandbox setup services initiated instantaneously upon signup. Ongoing monthly subscriptions can be deleted or canceled at any time from the admin cockpit without termination charges.
+                  The introductory <strong>₹99 AppointO Onboarding Trial</strong> offer is fully non-refundable due to the custom automated WhatsApp API and Meta sandbox setup services initiated instantaneously upon signup. Ongoing monthly subscriptions can be deleted or canceled at any time from the admin cockpit without termination charges.
                 </p>
               </section>
 

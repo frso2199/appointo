@@ -165,7 +165,7 @@ export default function EricChatbot() {
           </svg>
 
           {/* Floating 'ONLINE' Green Capsule badge under Eric */}
-          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-[#065F46] border border-emerald-450 px-1.5 py-0.5 rounded-full text-[8px] font-black text-emerald-300 tracking-widest uppercase shadow-md flex items-center gap-0.5 whitespace-nowrap">
+          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-[#065F46] border border-emerald-500 px-1.5 py-0.5 rounded-full text-[8px] font-black text-emerald-300 tracking-widest uppercase shadow-md flex items-center gap-0.5 whitespace-nowrap">
             <span className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-ping shrink-0" />
             <span>ERIC</span>
           </div>

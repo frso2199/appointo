@@ -66,7 +66,7 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
 
   const [welcomeTemplateText, setWelcomeTemplateText] = useState(() => {
     return localStorage.getItem('appointo_wa_tpl_welcome') || 
-      `Namaste *{owner}*! Thank you for claiming the AppointO ₹1 trial package for _{business}_. Let's schedule a 10-minute demo to activate your WhatsApp AI automatic bot.`;
+      `Namaste *{owner}*! Thank you for claiming the AppointO ₹99 trial package for _{business}_. Let's schedule a 10-minute demo to activate your WhatsApp AI automatic bot.`;
   });
 
   const [nurtureTemplateText, setNurtureTemplateText] = useState(() => {
@@ -403,7 +403,7 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
             <div className="flex items-center gap-3 justify-end">
               <div className="text-right hidden sm:block">
                 <span className="text-[10px] font-bold text-slate-400 block tracking-wider uppercase">Active Session</span>
-                <span className="text-xs text-slate-600 dark:text-slate-450 font-mono">{adminEmail}</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">{adminEmail}</span>
               </div>
               <button
                 onClick={() => setRefreshKey(r => r + 1)}
@@ -451,7 +451,7 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Conversion Rate</span>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl font-black text-blue-600 font-sans">{stats.conversionRate}%</span>
-              <span className="text-[10px] text-slate-450 block">leads in status &apos;converted&apos;</span>
+              <span className="text-[10px] text-slate-500 block">leads in status &apos;converted&apos;</span>
             </div>
           </div>
 
@@ -530,12 +530,12 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
             {/* Leads list list */}
             <div className="flex-1 overflow-y-auto max-h-[550px]" id="crm-leads-items-scroller">
               {loading ? (
-                <div className="p-8 text-center text-xs text-slate-450 dark:text-slate-500">
+                <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-500">
                   <RefreshCw className="mx-auto h-6 w-6 animate-spin text-slate-400 mb-2" />
                   <span>Loading lead pipeline registers...</span>
                 </div>
               ) : filteredLeads.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-450 dark:text-slate-500">
+                <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-500">
                   <AlertCircle className="mx-auto h-8 w-8 text-slate-350 mb-2" />
                   <p className="font-bold">No Leads Found</p>
                   <p className="mt-1 text-[11px]">No active leads match the query or filters selected.</p>
@@ -584,8 +584,8 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
             </div>
             
             {/* Sidebar Footer context */}
-            <div className="p-3.5 bg-slate-50 border-t border-slate-100 dark:bg-slate-950 dark:border-slate-850 text-center text-[10px] text-slate-450 leading-relaxed font-sans">
-              ℹ️ To claiming conversions, update lead status to <strong>Converted</strong>. Live users claimed via ₹1 registration sync instantly.
+            <div className="p-3.5 bg-slate-50 border-t border-slate-100 dark:bg-slate-950 dark:border-slate-850 text-center text-[10px] text-slate-500 leading-relaxed font-sans">
+              ℹ️ To claiming conversions, update lead status to <strong>Converted</strong>. Live users claimed via ₹99 registration sync instantly.
             </div>
 
           </div>
@@ -615,7 +615,7 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
 
                     {/* Change Status Action Dashboard Quick Buttons */}
                     <div className="space-y-2">
-                      <span className="text-[9px] font-bold text-slate-450 uppercase block tracking-wider text-right">Update Opportunity State</span>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase block tracking-wider text-right">Update Opportunity State</span>
                       <div className="flex flex-wrap items-center gap-1">
                         {(['contacted', 'demo_scheduled', 'converted', 'lost'] as const).map(st => (
                           <button
@@ -662,7 +662,7 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
                     </h4>
 
                     {selectedLead.follow_ups.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-450 dark:border-slate-800 dark:text-slate-500">
+                      <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-500">
                         <AlertCircle className="mx-auto h-7 w-7 text-slate-350 mb-1.5" />
                         <p className="font-bold">No Registered Follow-ups</p>
                         <p className="mt-0.5 text-[10px]">Log an outreach review on the right to start tracking timeline responses.</p>
@@ -1071,7 +1071,7 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
                   
                   {/* Recipient Simulation Selector */}
                   <div className="mb-3 space-y-1.5 bg-slate-50 border border-slate-150 p-2 rounded-2xl dark:bg-slate-950/20 dark:border-slate-800">
-                    <label className="block text-[9.5px] font-bold text-slate-450 uppercase tracking-widest leading-none">
+                    <label className="block text-[9.5px] font-bold text-slate-550 uppercase tracking-widest leading-none">
                       Simulate recipient token resolution
                     </label>
                     <div className="grid grid-cols-3 gap-1">
@@ -1237,9 +1237,9 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
 
                     {/* WhatsApp styled bottom text-input simulation area */}
                     <div className="bg-[#f0f2f5] dark:bg-[#111b21] p-1.5 flex items-center gap-1.5 shrink-0 border-t border-slate-200/40 dark:border-slate-800/15">
-                      <div className="flex-1 bg-white dark:bg-[#2a3942] rounded-full py-1 px-3 flex items-center justify-between text-slate-400">
+                      <div className="flex-1 bg-white dark:bg-[#2a3942] rounded-full py-1 px-3 flex items-center justify-between text-slate-450">
                         <span className="text-[9.5px]">Type a message...</span>
-                        <div className="flex items-center gap-1 text-slate-450">
+                        <div className="flex items-center gap-1 text-slate-500">
                           <span className="text-xs">📎</span>
                           <span className="text-xs">📷</span>
                         </div>
@@ -1274,7 +1274,7 @@ export default function CrmDashboard({ adminEmail, onLogout, darkMode }: CrmDash
                 type="button"
                 onClick={() => {
                   if (window.confirm("Restore custom template mappings to original defaults?")) {
-                    setDraftWelcome(`Namaste {owner}! Thank you for claiming the AppointO ₹1 trial package for {business}. Let's schedule a 10-minute demo to activate your WhatsApp AI automatic bot.`);
+                    setDraftWelcome(`Namaste {owner}! Thank you for claiming the AppointO ₹99 trial package for {business}. Let's schedule a 10-minute demo to activate your WhatsApp AI automatic bot.`);
                     setDraftNurture(`Hello {owner}! AppointO's automated reminders reduce customer no-shows by up to 85% for {business}. Let's integrate your Google Calendar today.`);
                     setDraftDiscount(`Special Offer for {business}: Get 25% extra discount if you migrate to the Professional Plan today. Auto-includes multi-staff sync and premium WhatsApp automation!`);
                     setSaveSuccess(false);
